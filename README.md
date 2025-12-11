@@ -6,13 +6,23 @@ This project implements a complete machine learning pipeline for credit risk pre
 
 ```
 .
-├── config.py                  # Configuration parameters
-├── data_preprocessing.py      # Data loading and preprocessing
-├── feature_selection.py       # Feature selection for ANFIS
-├── models.py                  # Model definitions and training
-├── evaluation.py              # Evaluation metrics and visualization
-├── main_pipeline.py           # Main orchestration script
-├── credit_student_pipeline.py # Student/learning version
+├── src/                       # Source code directory
+│   ├── __init__.py           # Package initialization
+│   ├── config.py             # Configuration parameters
+│   ├── data_preprocessing.py  # Data loading and preprocessing
+│   ├── feature_selection.py   # Feature selection for ANFIS
+│   ├── models.py             # Model definitions and training
+│   ├── evaluation.py         # Evaluation metrics and visualization
+│   ├── explainability.py     # SHAP-based explainability analysis
+│   ├── anfis_network.py      # ANFIS neural network implementation
+│   ├── main_pipeline.py      # Main orchestration script
+│   ├── credit_student_pipeline.py  # Student/learning version
+│   ├── test_pipeline.py      # Pipeline tests
+│   └── test_anfis.py         # ANFIS-specific tests
+├── models/                    # Trained model storage
+├── plots/                     # Generated visualizations
+├── results/                   # Results and metrics
+├── reports/                   # Analysis reports
 ├── methodology_section.md     # Detailed methodology documentation
 ├── requirement.text           # Python dependencies
 └── README.md                  # This file
@@ -44,16 +54,22 @@ Place the dataset in a `data/` directory or specify the path when running.
 ### Running the Pipeline
 
 ```bash
-# With default settings
-python main_pipeline.py path/to/your/dataset.csv
+# From the root directory
+python src/main_pipeline.py path/to/your/dataset.csv
 
-# Or modify config.py and run
-python main_pipeline.py
+# Or run tests to verify everything works
+python src/test_pipeline.py
+
+# Or run ANFIS-specific tests
+python src/test_anfis.py
+
+# Or modify src/config.py and run
+python src/main_pipeline.py
 ```
 
 ## Pipeline Overview
 
-### 1. Data Preprocessing (`data_preprocessing.py`)
+### 1. Data Preprocessing (`src/data_preprocessing.py`)
 
 - Missing value detection and handling
 - Outlier detection using z-scores
@@ -63,7 +79,7 @@ python main_pipeline.py
 - Train/test split with stratification
 - SMOTE for class imbalance
 
-### 2. Feature Selection (`feature_selection.py`)
+### 2. Feature Selection (`src/feature_selection.py`)
 
 - **Purpose**: Reduce dimensionality for ANFIS (curse of dimensionality)
 - **Methods**:
@@ -74,7 +90,7 @@ python main_pipeline.py
   - Ensemble Selection (combines multiple methods)
 - **Output**: Top 5-10 most important features
 
-### 3. Model Training (`models.py`)
+### 3. Model Training (`src/models.py`)
 
 #### Random Forest (Baseline)
 
@@ -96,7 +112,7 @@ python main_pipeline.py
 - Subtractive clustering for rule generation
 - **Note**: Requires custom implementation or external library
 
-### 4. Evaluation (`evaluation.py`)
+### 4. Evaluation (`src/evaluation.py`)
 
 #### Metrics
 
@@ -128,7 +144,7 @@ python main_pipeline.py
 
 ## Configuration
 
-Edit `config.py` to customize:
+Edit `src/config.py` to customize:
 
 ```python
 # Random seed for reproducibility
