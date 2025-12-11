@@ -2,10 +2,15 @@
 Test script for PyTorch ANFIS implementation
 """
 import sys
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
 import warnings
+
+# Add parent directory to path to allow running from root
+sys.path.insert(0, str(Path(__file__).parent))
+
 warnings.filterwarnings('ignore')
 
 import config

@@ -3,6 +3,12 @@ Quick test script to verify the code works without running the full notebook
 """
 
 import warnings
+import sys
+from pathlib import Path
+
+# Add parent directory to path to allow running from root
+sys.path.insert(0, str(Path(__file__).parent))
+
 warnings.filterwarnings('ignore')
 
 print("=" * 80)
