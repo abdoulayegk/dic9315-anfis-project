@@ -2,7 +2,7 @@
 
 This project implements a complete machine learning pipeline for credit risk prediction, comparing ANFIS (Adaptive Neuro-Fuzzy Inference System) against classical supervised learning baselines (Random Forest and SVM).
 
-## 📋 Project Structure
+## Project Structure
 
 ```
 .
@@ -18,7 +18,7 @@ This project implements a complete machine learning pipeline for credit risk pre
 └── README.md                  # This file
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -51,7 +51,7 @@ python main_pipeline.py path/to/your/dataset.csv
 python main_pipeline.py
 ```
 
-## 📊 Pipeline Overview
+## Pipeline Overview
 
 ### 1. Data Preprocessing (`data_preprocessing.py`)
 
@@ -126,7 +126,7 @@ python main_pipeline.py
 - Validation of rule coherence with financial domain knowledge
 - Comparison of "white box" (ANFIS) vs "black box" (SVM) interpretability
 
-## ⚙️ Configuration
+## Configuration
 
 Edit `config.py` to customize:
 
@@ -153,7 +153,7 @@ SVM_PARAMS = {...}
 ANFIS_CONFIG = {...}
 ```
 
-## 📈 Results
+## Results
 
 All results are saved in the `results/` directory:
 
@@ -163,7 +163,7 @@ All results are saved in the `results/` directory:
 - `roc_curves.png`: ROC curves for all models
 - `metrics_comparison.png`: Bar chart of key metrics
 
-## 🔬 Methodology Highlights
+## Methodology Highlights
 
 1. **Class Imbalance Handling**: SMOTE oversampling + class weights
 2. **Feature Selection**: Ensemble method to select most relevant features for ANFIS
@@ -171,7 +171,7 @@ All results are saved in the `results/` directory:
 4. **Reproducibility**: Fixed random seeds, versioned code, documented parameters
 5. **Interpretability**: Fuzzy rule extraction and analysis
 
-## 📝 Key Findings (Template)
+## Key Findings (Template)
 
 After running the pipeline, document:
 
@@ -180,7 +180,7 @@ After running the pipeline, document:
 3. What is the recall for the minority class (defaulters)?
 4. Are the ANFIS fuzzy rules interpretable and business-logical?
 
-## 🔧 ANFIS Implementation Notes
+## ANFIS Implementation Notes
 
 The current `models.py` contains a placeholder for ANFIS. To fully implement:
 
@@ -207,29 +207,29 @@ import skfuzzy as fuzz
 # Implement control system with fuzzy rules
 ```
 
-## 📚 References
+## References
 
 - UCI ML Repository: Default of Credit Card Clients Dataset
 - Jang, J.-S. R. (1993). ANFIS: Adaptive-Network-Based Fuzzy Inference System
 - Chawla et al. (2002). SMOTE: Synthetic Minority Over-sampling Technique
 
-## 🎓 Academic Context
+## Academic Context
 
 This implementation follows the methodology described in `methodology_section.md` and is designed for a master's thesis project evaluating ANFIS for credit risk prediction.
 
 ### Strengths of this approach:
 
-✅ Complete data preprocessing pipeline
-✅ Addresses class imbalance
-✅ Feature selection for ANFIS dimensionality
-✅ Statistical significance testing
-✅ Interpretability analysis
-✅ Reproducible and well-documented
+- Complete data preprocessing pipeline
+- Addresses class imbalance
+- Feature selection for ANFIS dimensionality
+- Statistical significance testing
+- Interpretability analysis
+- Reproducible and well-documented
 
-## 👤 Author
+## Author
 
 Master's Project - Credit Risk Prediction with ANFIS
 
-## 📄 License
+## License
 
 Academic use only
