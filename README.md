@@ -6,7 +6,7 @@ This project implements a complete machine learning pipeline for credit risk pre
 
 ```
 .
-├── src/                       # Source code directory
+├── src/                       # Source code directory...
 │   ├── __init__.py           # Package initialization
 │   ├── config.py             # Configuration parameters
 │   ├── data_preprocessing.py  # Data loading and preprocessing
