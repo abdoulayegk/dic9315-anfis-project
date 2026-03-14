@@ -1,0 +1,31 @@
+# Development Dependencies
+# =========================
+# Install with: pip install -r requirements-dev.txt
+
+# First install core dependencies
+-r requirements.txt
+
+# Code Quality & Linting
+ruff>=0.1.0           # Modern Python linter (replaces flake8, isort, pyupgrade)
+black>=23.0.0         # Code formatter
+mypy>=1.0.0           # Static type checker
+
+# Security
+bandit>=1.7.0         # Security linter
+pip-audit>=2.4.0      # Dependency vulnerability scanner
+
+# Testing
+pytest>=7.2.0         # Testing framework
+pytest-cov>=4.0.0     # Coverage plugin for pytest
+
+# Pre-commit
+pre-commit>=3.0.0     # Git hook manager
+
+# Documentation (for L4)
+sphinx>=6.0.0         # Documentation generator
+sphinx-rtd-theme>=1.2.0  # ReadTheDocs theme
+sphinx-autodoc-typehints>=1.22.0  # Type hints in docs
+
+# Jupyter (for notebooks)
+jupyter>=1.0.0
+nbstripout>=0.6.0     # Clean notebook outputs

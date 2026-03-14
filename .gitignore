@@ -58,6 +58,18 @@ data/
 Rapport_*.pdf
 *.pdf
 
+# Code quality tools caches (L2)
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Pre-commit
+.pre-commit-cache/
+
 # Results/outputs (optional - uncomment if you want to track these)
 # results/
 # plots/

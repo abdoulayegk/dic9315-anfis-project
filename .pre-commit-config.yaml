@@ -1,0 +1,143 @@
+# Pre-commit hooks configuration
+# See https://pre-commit.com for more information
+# Installation: pip install pre-commit
+# Setup: pre-commit install
+
+default_language_version:
+  python: python3
+
+repos:
+  # ============================================================================
+  # PRE-COMMIT BUILT-IN HOOKS
+  # ============================================================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Prevent giant files from being committed
+      - id: check-added-large-files
+        args: ['--maxkb=5000']
+
+      # Check for files that would conflict in case-insensitive filesystems
+      - id: check-case-conflict
+
+      # Check for merge conflicts
+      - id: check-merge-conflict
+
+      # Check for debugger imports and breakpoint()
+      - id: debug-statements
+
+      # Detect private key files
+      - id: detect-private-key
+
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+        exclude: '\.ipynb$'
+
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+        exclude: '\.ipynb$'
+
+      # Check YAML syntax
+      - id: check-yaml
+
+      # Check TOML syntax
+      - id: check-toml
+
+      # Check JSON syntax
+      - id: check-json
+
+      # Ensure Python files are valid syntax
+      - id: check-ast
+
+      # Check for files that would conflict in case-insensitive filesystems
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # ============================================================================
+  # RUFF - Modern Python linter (replaces flake8, isort, pyupgrade)
+  # ============================================================================
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.15
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: ['--fix', '--exit-non-zero-on-fix']
+
+      # Run the formatter
+      - id: ruff-format
+
+  # ============================================================================
+  # BLACK - Python code formatter
+  # ============================================================================
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        language_version: python3
+        args: ['--line-length=88']
+
+  # ============================================================================
+  # MYPY - Static type checker
+  # ============================================================================
+  # Temporarily disabled - will enable after code cleanup
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.8.0
+  #   hooks:
+  #     - id: mypy
+  #       args: [
+  #         '--ignore-missing-imports',
+  #         '--check-untyped-defs',
+  #         '--no-implicit-optional',
+  #         '--warn-redundant-casts',
+  #         '--warn-unused-ignores',
+  #       ]
+  #       additional_dependencies:
+  #         - types-requests
+  #         - types-PyYAML
+  #       exclude: '^(tests/|docs/)'
+
+  # ============================================================================
+  # BANDIT - Security linter
+  # ============================================================================
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+        args: ['-c', 'pyproject.toml']
+        additional_dependencies: ['bandit[toml]']
+        exclude: '^tests/'
+
+  # ============================================================================
+  # PIP-AUDIT - Check for vulnerable dependencies
+  # ============================================================================
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.6.3
+    hooks:
+      - id: pip-audit
+        args: ['--desc', 'on', '--skip-editable']
+        # Only run on requirement files
+        files: 'requirements.*\.txt$|pyproject\.toml$'
+
+  # ============================================================================
+  # JUPYTER NOTEBOOKS - Clean outputs and metadata
+  # ============================================================================
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.6.1
+    hooks:
+      - id: nbstripout
+        args: ['--extra-keys', 'metadata.kernelspec metadata.language_info']
+
+# ============================================================================
+# CI CONFIGURATION
+# ============================================================================
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: [pip-audit]  # Skip pip-audit in CI (can be slow)
+  submodules: false
