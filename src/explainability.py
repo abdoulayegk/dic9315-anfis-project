@@ -2,16 +2,16 @@
 SHAP-based explainability analysis for credit risk models
 """
 
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 import shap
-from pathlib import Path
-try:
-    from . import config
-except ImportError:
-    import config
+
+from . import config
+
 
 class SHAPExplainer:
     """SHAP analysis for model explainability"""
@@ -43,9 +43,9 @@ class SHAPExplainer:
         model_type : str
             Type of explainer: 'tree', 'kernel', or 'linear'
         """
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print(f"Creating SHAP explainer for {model_name}")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         # Convert to DataFrame if needed
         if isinstance(X_train, np.ndarray):
@@ -146,7 +146,7 @@ class SHAPExplainer:
         plt.tight_layout()
 
         output_file = (
-            self.output_dir / f'shap_summary_{model_name.lower().replace(" ", "_")}.png'
+            self.output_dir / f"shap_summary_{model_name.lower().replace(' ', '_')}.png"
         )
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         print(f"Summary plot saved to: {output_file}")
@@ -189,7 +189,7 @@ class SHAPExplainer:
         plt.tight_layout()
 
         output_file = (
-            self.output_dir / f'shap_bar_{model_name.lower().replace(" ", "_")}.png'
+            self.output_dir / f"shap_bar_{model_name.lower().replace(' ', '_')}.png"
         )
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         print(f"Bar plot saved to: {output_file}")
@@ -238,7 +238,7 @@ class SHAPExplainer:
 
         output_file = (
             self.output_dir
-            / f'shap_force_{model_name.lower().replace(" ", "_")}_inst{instance_idx}.png'
+            / f"shap_force_{model_name.lower().replace(' ', '_')}_inst{instance_idx}.png"
         )
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         print(f"Force plot saved to: {output_file}")
@@ -298,7 +298,7 @@ class SHAPExplainer:
 
         output_file = (
             self.output_dir
-            / f'shap_waterfall_{model_name.lower().replace(" ", "_")}_inst{instance_idx}.png'
+            / f"shap_waterfall_{model_name.lower().replace(' ', '_')}_inst{instance_idx}.png"
         )
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         print(f"Waterfall plot saved to: {output_file}")
@@ -344,7 +344,7 @@ class SHAPExplainer:
 
         output_file = (
             self.output_dir
-            / f'shap_dependence_{model_name.lower().replace(" ", "_")}_{feature_name}.png'
+            / f"shap_dependence_{model_name.lower().replace(' ', '_')}_{feature_name}.png"
         )
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         print(f"Dependence plot saved to: {output_file}")
@@ -388,9 +388,9 @@ class SHAPExplainer:
         top_n : int
             Number of top features to display
         """
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("COMPARING SHAP FEATURE IMPORTANCE ACROSS MODELS")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         # Collect importance for each model
         all_importance = {}
