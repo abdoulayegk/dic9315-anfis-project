@@ -1,0 +1,34 @@
+# Pre-commit configuration for automatic code quality checks
+# Run 'pre-commit install' after cloning to set up git hooks
+# These tools will run automatically before each commit
+
+repos:
+  # Ruff - Fast Python linter and formatter (replaces black + flake8)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.6
+    hooks:
+      # Lint and auto-fix issues
+      - id: ruff
+        args: [--fix]
+      # Format code (replaces black)
+      - id: ruff-format
+
+
+  # MyPy - Static type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.19.1
+    hooks:
+      - id: mypy
+        # Add type stubs if needed
+        additional_dependencies: [types-requests]
+        # Be lenient with imports for student projects
+        args: [--ignore-missing-imports]
+
+  # Bandit - Security linter for Python
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.4
+    hooks:
+      - id: bandit
+        # Use our pyproject.toml configuration
+        args: ["-c", "pyproject.toml"]
+        additional_dependencies: ["bandit[toml]"]

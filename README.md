@@ -24,7 +24,7 @@ This project implements a complete machine learning pipeline for credit risk pre
 ├── results/                   # Results and metrics
 ├── reports/                   # Analysis reports
 ├── methodology_section.md     # Detailed methodology documentation
-├── requirement.text           # Python dependencies
+├── requirements.txt          # Python dependencies
 └── README.md                  # This file
 ```
 
@@ -32,10 +32,40 @@ This project implements a complete machine learning pipeline for credit risk pre
 
 ### Prerequisites
 
-Install required packages:
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+
+### Setup with uv
 
 ```bash
-pip install -r requirement.text
+# Install dependencies and dev tools (lint, format, type-check, pre-commit)
+uv sync --extra dev
+
+# Optional: install pre-commit hooks so checks run before each commit
+pre-commit install
+```
+
+### Verify setup
+
+```bash
+# Lint and format check
+ruff check src/
+ruff format --check src/
+
+# Type checking
+mypy src/
+
+# Security scan
+bandit -r src/ -c pyproject.toml
+
+# Run all checks (lint, format, mypy, bandit)
+pre-commit run --all-files
+```
+
+### Install with pip (alternative)
+
+```bash
+pip install -r requirements.txt
 ```
 
 Or install individually:
