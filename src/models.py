@@ -13,9 +13,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
-
-import config
-from anfis_network import ANFISNetwork
+try:
+    from . import config
+    from .anfis_network import ANFISNetwork
+except ImportError:
+    import config
+    from anfis_network import ANFISNetwork
 
 
 class ModelTrainer:

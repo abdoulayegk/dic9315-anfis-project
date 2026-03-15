@@ -8,8 +8,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import shap
 from pathlib import Path
-import config
-
+try:
+    from . import config
+except ImportError:
+    import config
 
 class SHAPExplainer:
     """SHAP analysis for model explainability"""

@@ -12,7 +12,10 @@ from scipy.stats import wilcoxon, ttest_rel
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
-import config
+try:
+    from . import config
+except ImportError:
+    import config
 
 # Color palette
 COLORS = ["#7400ff", "#a788e4", "#d216d2", "#ffb500", "#36c9dd"]

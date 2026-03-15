@@ -8,15 +8,19 @@ import pandas as pd
 import torch
 import warnings
 
-# Add parent directory to path to allow running from root
-sys.path.insert(0, str(Path(__file__).parent))
-
 warnings.filterwarnings('ignore')
 
-import config
-from models import ModelTrainer
-from data_preprocessing import DataPreprocessor
-from feature_selection import FeatureSelector
+if __package__:
+    from . import config
+    from .models import ModelTrainer
+    from .data_preprocessing import DataPreprocessor
+    from .feature_selection import FeatureSelector
+else:
+    sys.path.insert(0, str(Path(__file__).parent))
+    import config
+    from models import ModelTrainer
+    from data_preprocessing import DataPreprocessor
+    from feature_selection import FeatureSelector
 
 def test_anfis():
     print("=" * 80)

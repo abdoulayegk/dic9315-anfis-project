@@ -9,14 +9,20 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import cross_val_score
 
-# Add parent directory to path to allow running from root
-sys.path.insert(0, str(Path(__file__).parent))
-
-import config
-from data_preprocessing import DataPreprocessor
-from feature_selection import FeatureSelector
-from models import ModelTrainer
-from evaluation import ModelEvaluator
+# Support both direct execution and package import
+if __package__:
+    from . import config
+    from .data_preprocessing import DataPreprocessor
+    from .feature_selection import FeatureSelector
+    from .models import ModelTrainer
+    from .evaluation import ModelEvaluator
+else:
+    sys.path.insert(0, str(Path(__file__).parent))
+    import config
+    from data_preprocessing import DataPreprocessor
+    from feature_selection import FeatureSelector
+    from models import ModelTrainer
+    from evaluation import ModelEvaluator
 
 
 def setup_directories():

@@ -6,9 +6,6 @@ import warnings
 import sys
 from pathlib import Path
 
-# Add parent directory to path to allow running from root
-sys.path.insert(0, str(Path(__file__).parent))
-
 warnings.filterwarnings('ignore')
 
 print("=" * 80)
@@ -18,11 +15,19 @@ print("=" * 80)
 # Test 1: Import all modules
 print("\n1. Testing imports...")
 try:
-    import config
-    from data_preprocessing import DataPreprocessor
-    from feature_selection import FeatureSelector
-    from models import ModelTrainer
-    from evaluation import ModelEvaluator
+    if __package__:
+        from . import config
+        from .data_preprocessing import DataPreprocessor
+        from .feature_selection import FeatureSelector
+        from .models import ModelTrainer
+        from .evaluation import ModelEvaluator
+    else:
+        sys.path.insert(0, str(Path(__file__).parent))
+        import config
+        from data_preprocessing import DataPreprocessor
+        from feature_selection import FeatureSelector
+        from models import ModelTrainer
+        from evaluation import ModelEvaluator
     print("   All imports successful!")
 except Exception as e:
     print(f"   ERROR: {e}")
@@ -31,7 +36,7 @@ except Exception as e:
 # Test 2: Load and preprocess data
 print("\n2. Testing data preprocessing...")
 try:
-    data_path = "default of credit card clients.xls"
+    data_path = "data/default_credit_card_clients.csv"
     target_column = "default payment next month"
     
     data_prep = DataPreprocessor(random_seed=config.RANDOM_SEED)
