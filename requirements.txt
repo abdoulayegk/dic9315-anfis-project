@@ -47,6 +47,7 @@ Pygments==2.19.2
 pyparsing==3.3.2
 pytest==9.0.2
 pytest-cov==7.0.0
+pytest-html>=4.1.1
 python-dateutil==2.9.0.post0
 scikit-fuzzy==0.5.0
 scikit-learn==1.8.0

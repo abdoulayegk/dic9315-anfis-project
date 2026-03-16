@@ -54,6 +54,7 @@ dependencies = [
     "pyparsing==3.3.2",
     "pytest==9.0.2",
     "pytest-cov==7.0.0",
+    "pytest-html>=4.1.1",
     "python-dateutil==2.9.0.post0",
     "scikit-fuzzy==0.5.0",
     "scikit-learn==1.8.0",
@@ -81,6 +82,7 @@ dev = [
     "pre-commit>=3.0.0",  # Git hooks for automated checks
     "bandit[toml]>=1.7.0", # Security linter for Python
     "pip-audit>=2.0.0",   # Check for known vulnerabilities in dependencies
+    "mutmut>=2.5.1",      # Mutation testing
 ]
 
 # Ruff configuration - modern Python linter and formatter (replaces black + flake8)
@@ -140,6 +142,26 @@ ignore_missing_imports = true
 # Pytest: run only tests in tests/ (exclude src/test_*.py scripts that need dataset)
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = [
+    "-q",
+    "--strict-markers",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=xml:reports/coverage.xml",
+    "--cov-report=html:reports/coverage_html",
+    "--junitxml=reports/junit.xml",
+    "--html=reports/pytest_report.html",
+    "--self-contained-html",
+    "--cov-fail-under=52",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
 
 # Bandit configuration - security linting
 [tool.bandit]

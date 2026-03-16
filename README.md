@@ -97,6 +97,23 @@ python src/test_anfis.py
 python src/main_pipeline.py
 ```
 
+### Running Automated Tests
+
+```bash
+# Full suite: unit + integration + e2e, with coverage and reports
+pytest
+
+# E2E smoke tests only
+pytest tests/e2e -k smoke
+```
+
+### Bonus: Mutation Testing
+
+```bash
+mutmut run --paths-to-mutate src --tests-dir tests
+mutmut results
+```
+
 ## Pipeline Overview
 
 ### 1. Data Preprocessing (`src/data_preprocessing.py`)

@@ -4,8 +4,15 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-# Rendre src/ importable depuis les tests
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# Rendre la racine du projet importable depuis les tests (package `src`)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_reports_dir():
+    """Ensure report output directory exists for JUnit/XML and HTML reports."""
+    (PROJECT_ROOT / "reports").mkdir(exist_ok=True)
 
 
 @pytest.fixture(autouse=True)
@@ -60,14 +67,16 @@ def small_data():
 @pytest.fixture
 def preprocessor():
     """Instance de DataPreprocessor prête à l'emploi."""
-    from data_preprocessing import DataPreprocessor
+    from src.data_preprocessing import DataPreprocessor
+
     return DataPreprocessor(random_seed=42)
 
 
 @pytest.fixture
 def feature_selector():
     """Instance de FeatureSelector avec 5 features."""
-    from feature_selection import FeatureSelector
+    from src.feature_selection import FeatureSelector
+
     return FeatureSelector(n_features=5, random_seed=42)
 
 

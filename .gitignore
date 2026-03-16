@@ -20,22 +20,17 @@ wheels/
 .installed.cfg
 *.egg
 
-# Code quality tools
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-.pytest_cache/
-
 # Virtual environments
 venv/
 ENV/
 env/
 .venv
+.venv-wsl/
 DIC9315/
 
-# Jupyter Notebook (checkpoints only; track .ipynb source)
+# Jupyter Notebook
 .ipynb_checkpoints/
+*.ipynb
 
 # IDE
 .vscode/
@@ -64,15 +59,12 @@ data/
 Rapport_*.pdf
 *.pdf
 
-# Generated outputs (do not push)
-results/
-plots/
+# Pytest
+.pytest_cache/
 reports/
+.mutmut-cache/
 
-# Local / secrets
-.env
-.env.*
-!.env.example
-*.log
-
-# uv (lock file uv.lock is committed for reproducible installs)
+# Results/outputs (optional - uncomment if you want to track these)
+# results/
+# plots/
+# models/
