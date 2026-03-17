@@ -18,9 +18,7 @@ permissions:
   packages: write
 
 jobs:
-  # ──────────────────────────────────────────────────────────────────────────
-  # Job 1: Code quality and security checks (runs independently, no deps)
-  # ──────────────────────────────────────────────────────────────────────────
+
   lint-and-security:
     name: Code Quality & Security
     runs-on: ubuntu-latest
@@ -59,10 +57,7 @@ jobs:
         # Allow vulnerability warnings for learning - can be strict later
         continue-on-error: true
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # Job 2: Tests + coverage (runs independently, produces artifacts consumed
-  #         by sonarqube, mutation-tests, build-docs, publish-*)
-  # ──────────────────────────────────────────────────────────────────────────
+
   run-tests:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -94,9 +89,7 @@ jobs:
             reports/pytest_report.html
             reports/coverage_html/
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # Job 3: Mutation testing — needs run-tests (PR only)
-  # ──────────────────────────────────────────────────────────────────────────
+
   mutation-tests:
     name: Mutation Testing (Optional)
     runs-on: ubuntu-latest
@@ -130,9 +123,7 @@ jobs:
           name: mutmut-cache
           path: .mutmut-cache/
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # Job 4: SonarQube — needs run-tests (artifact) + lint-and-security (PR only)
-  # ──────────────────────────────────────────────────────────────────────────
+
   sonarqube:
     name: SonarQube
     runs-on: ubuntu-latest
@@ -146,6 +137,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: test-and-coverage-reports
+          path: .   # extract into workspace root, preserving reports/ sub-path
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
@@ -156,9 +148,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # Job 5: Build & deploy Sphinx docs — needs both lint and tests
-  # ──────────────────────────────────────────────────────────────────────────
+
   build-docs:
     name: Build and Deploy Documentation
     runs-on: ubuntu-latest
@@ -191,10 +181,7 @@ jobs:
           publish_dir: ./docs/build/html
           force_orphan: true
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # Job 6: Build & upload Python package — needs both lint and tests
-  #         (push to main / develop / release/* only)
-  # ──────────────────────────────────────────────────────────────────────────
+
   publish-package:
     name: Publish Python Package
     runs-on: ubuntu-latest
@@ -219,10 +206,7 @@ jobs:
           name: python-package
           path: dist/
 
-  # ──────────────────────────────────────────────────────────────────────────
-  # Job 7: Build & push container image — needs both lint and tests
-  #         (push to main / develop / release/* / hotfix/* only)
-  # ──────────────────────────────────────────────────────────────────────────
+
   publish-container:
     name: Publish Container Image
     runs-on: ubuntu-latest
