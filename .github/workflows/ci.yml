@@ -149,6 +149,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: test-and-coverage-reports
+          path: reports
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
