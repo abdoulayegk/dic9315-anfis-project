@@ -164,17 +164,16 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
         with:
+          version: "latest"
           python-version: "3.12"
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
-      - name: Install dependencies (editable install included via uv sync)
-        run: uv sync --extra dev
+      - name: Install dependencies (uv)
+        run: uv sync --frozen --extra dev
 
       - name: Build documentation with Sphinx
-        run: |
-          cd docs
-          uv run make html
+        run: uv run make -C docs html
 
       - name: Publish documentation to GitHub Pages
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')

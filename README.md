@@ -23,6 +23,7 @@ This project implements a complete machine learning pipeline for credit risk pre
 ├── plots/                     # Generated visualizations
 ├── results/                   # Results and metrics
 ├── reports/                   # Analysis reports
+├── docs/                      # Sphinx source (API reference)
 ├── methodology_section.md     # Detailed methodology documentation
 ├── requirements.txt          # Python dependencies
 └── README.md                  # This file
@@ -61,6 +62,15 @@ bandit -r src/ -c pyproject.toml
 # Run all checks (lint, format, mypy, bandit)
 pre-commit run --all-files
 ```
+
+### Documentation (Sphinx)
+
+```bash
+uv sync --extra dev
+uv run make -C docs html
+```
+
+Then open `docs/build/html/index.html`. Pushes to `main` or `develop` deploy the built site to GitHub Pages. See [DEVELOPMENT.md](DEVELOPMENT.md) for details.
 
 ### Install with pip (alternative)
 

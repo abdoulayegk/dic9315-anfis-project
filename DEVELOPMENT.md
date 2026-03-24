@@ -101,13 +101,26 @@ mutmut run --paths-to-mutate src --tests-dir tests
 mutmut results
 ```
 
-In CI, mutation testing is configured as an optional job triggered by `workflow_dispatch`.
+In CI, mutation testing runs on pull requests as an optional job.
 
 Inspect one mutant in detail:
 
 ```bash
 mutmut show <mutant_id>
 ```
+
+## Sphinx documentation (API)
+
+API documentation is generated with [Sphinx](https://www.sphinx-doc.org/) and `sphinx.ext.autodoc` from docstrings in `src/`.
+
+```bash
+uv sync --extra dev
+uv run make -C docs html
+```
+
+Open `docs/build/html/index.html` in a browser. The `docs/build/` directory is generated and should not be committed.
+
+On push to `main` or `develop`, GitHub Actions builds the same output and publishes it to GitHub Pages (branch `gh-pages`). Configure the site under **Settings → Pages** if needed (source: branch `gh-pages`, folder `/`).
 
 ## CI/CD
 

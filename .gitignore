@@ -20,6 +20,13 @@ wheels/
 .installed.cfg
 *.egg
 
+# Code quality tools
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.pytest_cache/
+
 # Virtual environments
 venv/
 ENV/
@@ -28,9 +35,8 @@ env/
 .venv-wsl/
 DIC9315/
 
-# Jupyter Notebook
+# Jupyter Notebook (checkpoints only; track .ipynb source)
 .ipynb_checkpoints/
-*.ipynb
 
 # IDE
 .vscode/
@@ -42,6 +48,8 @@ DIC9315/
 # OS
 .DS_Store
 Thumbs.db
+.~lock.*
+**/.~lock.*
 
 # Data files (large)
 *.csv
@@ -60,12 +68,14 @@ results/
 Rapport_*.pdf
 *.pdf
 
-# Pytest
-.pytest_cache/
+# Sphinx (generated site; tracked sources are under docs/source/)
+docs/build/
+
+# Generated outputs (do not push)
+results/
+plots/
 reports/
 .mutmut-cache/
 
 # Results/outputs (optional - uncomment if you want to track these)
-# results/
-# plots/
 # models/
