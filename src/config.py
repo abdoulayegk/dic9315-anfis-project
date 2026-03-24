@@ -7,7 +7,7 @@ RANDOM_SEED = 42
 
 # Data split configuration
 TRAIN_TEST_SPLIT = 0.8
-CV_FOLDS = 2
+CV_FOLDS = 3
 CV_FOLDS_FINAL = 2  # For final stability check
 
 # Class imbalance handling
