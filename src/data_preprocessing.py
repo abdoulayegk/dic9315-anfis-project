@@ -117,9 +117,13 @@ class DataPreprocessor:
 
     def identify_column_types(self, df, target_col):
         """Identify categorical and numerical columns"""
-        self.categorical_columns = df.select_dtypes(
-            include=["object", "category"]
-        ).columns.tolist()
+        self.categorical_columns = [
+            col
+            for col in df.columns
+            if pd.api.types.is_object_dtype(df[col])
+            or isinstance(df[col].dtype, pd.CategoricalDtype)
+            or pd.api.types.is_string_dtype(df[col])
+        ]
         self.numerical_columns = df.select_dtypes(
             include=["int64", "float64"]
         ).columns.tolist()

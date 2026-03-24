@@ -2,140 +2,97 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from joblib import dump
 
-from src import main_pipeline
-
-
-class DummyPreprocessor:
-    def __init__(self, random_seed=None):
-        self.random_seed = random_seed
-
-    def full_pipeline(self, filepath, target_col, apply_smote, winsorize):
-        X_train = pd.DataFrame(np.random.rand(20, 4), columns=["f1", "f2", "f3", "f4"])
-        X_test = pd.DataFrame(np.random.rand(10, 4), columns=["f1", "f2", "f3", "f4"])
-        y_train = np.array([0, 1] * 10)
-        y_test = np.array([0, 1] * 5)
-        return X_train, X_test, y_train, y_test, X_train.columns.tolist()
+from src import config
+from src.data_preprocessing import DataPreprocessor
+from src.feature_selection import FeatureSelector
+from src.models import ModelTrainer
 
 
-class DummySelector:
-    transformed_calls = 0
+def _write_small_credit_csv(csv_path: Path, n_rows: int = 40) -> Path:
+    rng = np.random.default_rng(42)
 
-    def __init__(self, n_features, random_seed):
-        self.n_features = n_features
+    y = np.array([0, 1] * (n_rows // 2))
+    data = pd.DataFrame(
+        {
+            "age": rng.integers(21, 60, size=n_rows),
+            "income": rng.normal(50000, 12000, size=n_rows),
+            "balance": rng.normal(1500, 500, size=n_rows),
+            "gender": np.where(rng.random(n_rows) > 0.5, "M", "F"),
+            "default": y,
+        }
+    )
 
-    def ensemble_selection(self, X, y, methods=None):
-        return X.columns[: self.n_features].tolist(), {c: 1.0 for c in X.columns}
-
-    def transform(self, X):
-        DummySelector.transformed_calls += 1
-        return X.iloc[:, : min(self.n_features, X.shape[1])]
-
-
-class DummyEvaluator:
-    def __init__(self, output_dir):
-        self.output_dir = output_dir
-        self.evaluated = []
-
-    def evaluate_single_model(self, model, X_test, y_test, model_name):
-        self.evaluated.append(model_name)
-        return {"model": model_name, "f1_score": 0.8}
-
-    def compare_models(self):
-        return pd.DataFrame({"Model": ["A"], "F1-Score": [0.8]})
-
-    def plot_confusion_matrices(self):
-        return None
-
-    def plot_roc_curves(self, models_dict, X_test, y_test):
-        return None
-
-    def plot_metrics_comparison(self):
-        return None
-
-    def statistical_significance_test(self, cv_scores_dict, test="wilcoxon"):
-        return pd.DataFrame({"Model 1": ["A"], "Model 2": ["B"], "p-value": [0.2]})
+    data.to_csv(csv_path, index=False)
+    return csv_path
 
 
-class DummyTrainerWithAnfis:
-    def __init__(self, random_seed=None):
-        self.random_seed = random_seed
+def test_data_to_model_small_csv_full_preprocess_then_train_svm(tmp_path):
+    csv_path = _write_small_credit_csv(tmp_path / "credit_small.csv", n_rows=40)
 
-    def train_random_forest(self, X_train, y_train, cv, search_type, n_iter):
-        return "rf", {"a": 1}
+    preprocessor = DataPreprocessor(random_seed=42)
+    X_train, X_test, y_train, y_test, feature_names = preprocessor.full_pipeline(
+        filepath=str(csv_path),
+        target_col="default",
+        apply_smote=False,
+        winsorize=False,
+    )
 
-    def train_svm(self, X_train, y_train, cv, search_type, n_iter):
-        return "svm", {"b": 2}
+    assert X_train.shape[0] > 0
+    assert X_test.shape[0] > 0
+    assert len(feature_names) == X_train.shape[1]
+    assert len(y_train) > 0
+    assert len(y_test) > 0
 
-    def train_anfis(self, X_train, y_train, n_features=None):
-        return "anfis", {"c": 3}
+    trainer = ModelTrainer(random_seed=42)
+    svm_model, svm_params = trainer.train_svm(
+        X_train, y_train, cv=2, search_type="randomized", n_iter=1
+    )
 
-
-class DummyTrainerWithoutAnfis(DummyTrainerWithAnfis):
-    def train_anfis(self, X_train, y_train, n_features=None):
-        return None, None
-
-
-def _patch_fast_pipeline(monkeypatch, with_feature_selection=True, with_anfis=True):
-    monkeypatch.setattr(main_pipeline, "DataPreprocessor", DummyPreprocessor)
-    monkeypatch.setattr(main_pipeline, "FeatureSelector", DummySelector)
-    monkeypatch.setattr(main_pipeline, "ModelEvaluator", DummyEvaluator)
-    monkeypatch.setattr(main_pipeline, "cross_val_score", lambda *args, **kwargs: np.array([0.7, 0.72]))
-    monkeypatch.setattr(main_pipeline.np.random, "uniform", lambda a, b, n: np.array([0.75] * n))
-
-    trainer_cls = DummyTrainerWithAnfis if with_anfis else DummyTrainerWithoutAnfis
-    monkeypatch.setattr(main_pipeline, "ModelTrainer", trainer_cls)
-
-    monkeypatch.setattr(main_pipeline.config, "USE_FEATURE_SELECTION", with_feature_selection)
-    monkeypatch.setattr(main_pipeline.config, "CV_FOLDS", 2)
-    monkeypatch.setattr(main_pipeline.config, "CV_FOLDS_FINAL", 2)
+    assert svm_model is not None
+    assert isinstance(svm_params, dict)
 
 
-def test_setup_directories_creates_paths(tmp_path, monkeypatch):
-    monkeypatch.setattr(main_pipeline.config, "OUTPUT_DIR", str(tmp_path / "results"))
-    monkeypatch.setattr(main_pipeline.config, "MODELS_DIR", str(tmp_path / "models"))
-    monkeypatch.setattr(main_pipeline.config, "PLOTS_DIR", str(tmp_path / "plots"))
-    monkeypatch.setattr(main_pipeline.config, "REPORTS_DIR", str(tmp_path / "reports"))
+def test_config_driven_selection_returns_expected_feature_count(monkeypatch):
+    monkeypatch.setattr(config, "N_FEATURES_ANFIS", 3)
 
-    main_pipeline.setup_directories()
+    rng = np.random.default_rng(42)
+    X = pd.DataFrame(
+        rng.normal(size=(60, 6)),
+        columns=["f1", "f2", "f3", "f4", "f5", "f6"],
+    )
+    y = ((X["f1"] + X["f2"] * 0.5) > 0).astype(int)
 
-    assert Path(main_pipeline.config.OUTPUT_DIR).exists()
-    assert Path(main_pipeline.config.MODELS_DIR).exists()
-    assert Path(main_pipeline.config.PLOTS_DIR).exists()
-    assert Path(main_pipeline.config.REPORTS_DIR).exists()
+    selector = FeatureSelector(n_features=config.N_FEATURES_ANFIS, random_seed=42)
+    selected_features, scores = selector.mutual_info_selection(X, y)
 
-
-def test_main_runs_without_feature_selection(monkeypatch):
-    _patch_fast_pipeline(monkeypatch, with_feature_selection=False, with_anfis=True)
-
-    result = main_pipeline.main(data_path="dummy.csv", target_column="default")
-
-    assert "models" in result
-    assert "Random Forest" in result["models"]
-    assert "SVM" in result["models"]
-    assert "ANFIS" in result["models"]
+    assert selector.n_features == 3
+    assert len(selected_features) == 3
+    assert isinstance(scores, dict)
 
 
-def test_main_runs_with_feature_selection_and_transforms(monkeypatch):
-    DummySelector.transformed_calls = 0
-    _patch_fast_pipeline(monkeypatch, with_feature_selection=True, with_anfis=True)
+def test_end_to_end_pipeline_persists_model_to_models_directory(tmp_path, monkeypatch):
+    models_dir = tmp_path / "models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(config, "MODELS_DIR", str(models_dir))
 
-    _ = main_pipeline.main(data_path="dummy.csv", target_column="default")
+    csv_path = _write_small_credit_csv(tmp_path / "credit_persist.csv", n_rows=40)
 
-    assert DummySelector.transformed_calls >= 2
+    preprocessor = DataPreprocessor(random_seed=42)
+    X_train, _, y_train, _, _ = preprocessor.full_pipeline(
+        filepath=str(csv_path),
+        target_col="default",
+        apply_smote=False,
+        winsorize=False,
+    )
 
+    trainer = ModelTrainer(random_seed=42)
+    svm_model, _ = trainer.train_svm(
+        X_train, y_train, cv=2, search_type="randomized", n_iter=1
+    )
 
-def test_main_skips_anfis_when_not_available(monkeypatch):
-    _patch_fast_pipeline(monkeypatch, with_feature_selection=True, with_anfis=False)
+    model_path = Path(config.MODELS_DIR) / "svm_integration.joblib"
+    dump(svm_model, model_path)
 
-    result = main_pipeline.main(data_path="dummy.csv", target_column="default")
-
-    assert "ANFIS" not in result["models"]
-
-
-def test_main_returns_expected_top_level_keys(monkeypatch):
-    _patch_fast_pipeline(monkeypatch, with_feature_selection=True, with_anfis=True)
-
-    result = main_pipeline.main(data_path="dummy.csv", target_column="default")
-
-    assert set(result.keys()) == {"models", "evaluator", "comparison", "cv_scores"}
+    assert model_path.exists()

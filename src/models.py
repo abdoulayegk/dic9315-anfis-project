@@ -176,6 +176,10 @@ class ANFISClassifier(BaseEstimator, ClassifierMixin):
         if isinstance(y, pd.Series):
             y = y.values
 
+        # Ensure arrays are writable/contiguous before converting to torch tensors.
+        X = np.asarray(X, dtype=np.float32).copy()
+        y = np.asarray(y, dtype=np.float32).copy()
+
         n_samples, n_features = X.shape
 
         # Initialize model
@@ -189,8 +193,8 @@ class ANFISClassifier(BaseEstimator, ClassifierMixin):
         criterion = nn.BCEWithLogitsLoss()
 
         # Prepare data loader
-        X_tensor = torch.FloatTensor(X)
-        y_tensor = torch.FloatTensor(y).unsqueeze(1)  # (batch, 1)
+        X_tensor = torch.from_numpy(X)
+        y_tensor = torch.from_numpy(y).unsqueeze(1)  # (batch, 1)
 
         dataset = TensorDataset(X_tensor, y_tensor)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
@@ -235,10 +239,11 @@ class ANFISClassifier(BaseEstimator, ClassifierMixin):
         """Predict class labels"""
         if isinstance(X, pd.DataFrame):
             X = X.values
+        X = np.asarray(X, dtype=np.float32).copy()
 
         self.model.eval()
         with torch.no_grad():
-            X_tensor = torch.FloatTensor(X)
+            X_tensor = torch.from_numpy(X)
             outputs, _ = self.model(X_tensor)
             # Apply sigmoid to get probabilities
             probs = torch.sigmoid(outputs)
@@ -251,10 +256,11 @@ class ANFISClassifier(BaseEstimator, ClassifierMixin):
         """Predict class probabilities"""
         if isinstance(X, pd.DataFrame):
             X = X.values
+        X = np.asarray(X, dtype=np.float32).copy()
 
         self.model.eval()
         with torch.no_grad():
-            X_tensor = torch.FloatTensor(X)
+            X_tensor = torch.from_numpy(X)
             outputs, _ = self.model(X_tensor)
             probs = torch.sigmoid(outputs).numpy()
 
