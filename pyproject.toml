@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "mgl7760-projet-equipe3"
 version = "0.1.0"
@@ -81,7 +85,13 @@ dev = [
     "pre-commit>=3.0.0",  # Git hooks for automated checks
     "bandit[toml]>=1.7.0", # Security linter for Python
     "pip-audit>=2.0.0",   # Check for known vulnerabilities in dependencies
+    "sphinx>=8.0.0",      # API documentation (Sphinx + autodoc)
+    "sphinx-rtd-theme>=3.0.0",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src"]
 
 # Ruff configuration - modern Python linter and formatter (replaces black + flake8)
 [tool.ruff]

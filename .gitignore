@@ -65,6 +65,9 @@ results/
 Rapport_*.pdf
 *.pdf
 
+# Sphinx (generated site; tracked sources are under docs/source/)
+docs/build/
+
 # Generated outputs (do not push)
 results/
 plots/

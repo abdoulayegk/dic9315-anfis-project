@@ -69,6 +69,19 @@ bandit -r src -c pyproject.toml  # Security check
 pip-audit -r requirements.txt    # Vulnerability check
 ```
 
+## Sphinx documentation (API)
+
+API documentation is generated with [Sphinx](https://www.sphinx-doc.org/) and `sphinx.ext.autodoc` from docstrings in `src/`.
+
+```bash
+uv sync --extra dev
+uv run make -C docs html
+```
+
+Open `docs/build/html/index.html` in a browser. The `docs/build/` directory is generated and should not be committed.
+
+On push to `main` or `develop`, GitHub Actions builds the same output and publishes it to GitHub Pages (branch `gh-pages`). Configure the site under **Settings → Pages** if needed (source: branch `gh-pages`, folder `/`).
+
 ## CI/CD
 
 The GitHub Actions workflow will automatically run all these checks on:
