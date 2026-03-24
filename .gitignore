@@ -48,6 +48,7 @@ Thumbs.db
 *.xls
 *.xlsx
 data/
+results/
 
 # Model files
 *.pkl

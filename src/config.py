@@ -7,8 +7,8 @@ RANDOM_SEED = 42
 
 # Data split configuration
 TRAIN_TEST_SPLIT = 0.8
-CV_FOLDS = 5
-CV_FOLDS_FINAL = 10  # For final stability check
+CV_FOLDS = 2
+CV_FOLDS_FINAL = 2  # For final stability check
 
 # Class imbalance handling
 USE_SMOTE = False
@@ -24,16 +24,19 @@ USE_WINSORIZATION = True
 
 # Model hyperparameter search spaces
 RANDOM_FOREST_PARAMS = {
-    "n_estimators": [100, 200, 300, 500],
-    "max_depth": [10, 20, 30, None],
-    "min_samples_split": [2, 5, 10],
-    "min_samples_leaf": [1, 2, 4],
+    "n_estimators": [100, 200],
+    "max_depth": [10, 20, None],
+    "min_samples_split": [2, 5],
+    "min_samples_leaf": [1, 2],
     "criterion": ["gini", "entropy"],
     "class_weight": ["balanced", None],
 }
 
 SVM_PARAMS = {
-    "C": [0.1, 1, 10, 100],
+    "C": [
+        0.1,
+        1,
+    ],
     "gamma": ["scale", "auto", 0.001, 0.01, 0.1],
     "kernel": ["rbf"],
     "class_weight": ["balanced", None],
