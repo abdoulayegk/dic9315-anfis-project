@@ -2,6 +2,7 @@
 SHAP-based explainability analysis for credit risk models
 """
 
+import warnings
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -133,13 +134,19 @@ class SHAPExplainer:
         shap_data = self.shap_values[model_name]
 
         plt.figure(figsize=(12, 8))
-        shap.summary_plot(
-            shap_data["values"],
-            shap_data["data"],
-            max_display=max_display,
-            show=False,
-            color_bar_label="Feature Value",
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=".*global RNG was seeded by calling `np.random.seed`.*",
+                category=FutureWarning,
+            )
+            shap.summary_plot(
+                shap_data["values"],
+                shap_data["data"],
+                max_display=max_display,
+                show=False,
+                color_bar_label="Feature Value",
+            )
         plt.title(
             f"SHAP Summary Plot - {model_name}", fontsize=14, fontweight="bold", pad=20
         )

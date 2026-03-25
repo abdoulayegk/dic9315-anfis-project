@@ -57,41 +57,31 @@ jobs:
         continue-on-error: true
 
   run-tests:
-    name: Run Tests (Docker - CPU Optimized)
+    name: Run Tests (uv)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build optimized CI image (CPU-only, ~1.85GB)
-        uses: docker/build-push-action@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
         with:
-          context: .
-          file: ./Dockerfile.ci
-          load: true
-          tags: anfis-ci:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
-      - name: Run tests in Docker container
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}/reports:/app/reports \
-            anfis-ci:test \
-            pytest -v --cov=src --cov-report=term-missing
+      - name: Install dependencies
+        run: uv sync
 
-      - name: Upload test and coverage reports
+      - name: Run tests with pytest
+        run: uv run pytest
+        continue-on-error: false
+
+      - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-and-coverage-reports
-          path: |
-            reports/coverage.xml
-            reports/junit.xml
-            reports/pytest_report.html
-            reports/coverage_html/
+          name: coverage-report
+          path: coverage.xml
 
   mutation-tests:
     name: Mutation Testing (Optional - Docker CPU)
@@ -117,9 +107,10 @@ jobs:
       - name: Run mutation testing in Docker container
         run: |
           docker run --rm \
+            -v ${{ github.workspace }}:/app \
             -v ${{ github.workspace }}/.mutmut-cache:/.mutmut-cache \
             anfis-mutant:test \
-            pip install --no-cache-dir mutmut && mutmut run --paths-to-mutate src/data_preprocessing.py --tests-dir tests/unit || true && mutmut run --paths-to-mutate src/feature_selection.py --tests-dir tests/unit || true && mutmut results || true
+            bash -c "pip install --no-cache-dir mutmut && mutmut run --paths-to-mutate src/data_preprocessing.py --tests-dir tests/unit || true && mutmut run --paths-to-mutate src/feature_selection.py --tests-dir tests/unit || true && mutmut results || true"
 
       - name: Upload mutation cache
         uses: actions/upload-artifact@v4
@@ -140,8 +131,7 @@ jobs:
       - name: Download coverage report
         uses: actions/download-artifact@v4
         with:
-          name: test-and-coverage-reports
-          path: . # extract into workspace root, preserving reports/ sub-path
+          name: coverage-report
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:

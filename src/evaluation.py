@@ -100,7 +100,7 @@ class ModelEvaluator:
         print(cm)
 
         print("\nClassification Report:")
-        print(classification_report(y_test, y_pred))
+        print(classification_report(y_test, y_pred, zero_division=0))
 
         return metrics
 

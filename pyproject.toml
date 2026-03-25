@@ -57,7 +57,7 @@ dependencies = [
     "pandas==3.0.1",
     "pillow==12.1.1",
     "pluggy==1.6.0",
-    "pygments==2.19.2",
+    "pygments==2.19.1",
     "pyparsing==3.3.2",
     "pytest==9.0.2",
     "pytest-cov==7.0.0",
@@ -160,21 +160,33 @@ addopts = [
     "--strict-markers",
     "--cov=src",
     "--cov-report=term-missing",
-    "--cov-report=xml:reports/coverage.xml",
+    "--cov-report=xml",
     "--cov-report=html:reports/coverage_html",
     "--junitxml=reports/junit.xml",
     "--html=reports/pytest_report.html",
     "--self-contained-html",
-    "--cov-fail-under=52",
+    "--cov-fail-under=80",
 ]
 
 [tool.coverage.run]
 branch = true
 source = ["src"]
+omit = [
+    "src/main_pipeline.py",
+    "src/credit_student_pipeline.py",
+    "src/test_anfis.py",
+    "src/test_pipeline.py",
+]
 
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
+omit = [
+    "src/main_pipeline.py",
+    "src/credit_student_pipeline.py",
+    "src/test_anfis.py",
+    "src/test_pipeline.py",
+]
 
 # Bandit configuration - security linting
 [tool.bandit]

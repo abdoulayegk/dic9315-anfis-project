@@ -1,5 +1,8 @@
 # Credit Risk Prediction Pipeline: ANFIS vs Baseline Models
 
+[![Build Status](https://img.shields.io/badge/build-pending-lightgrey.svg)](https://github.com/<org>/<repo>/actions)
+[![SonarQube Quality Gate](https://img.shields.io/badge/quality%20gate-pending-lightgrey.svg)](https://sonarcloud.io/summary/new_code?id=<sonar_project_key>)
+
 This project implements a complete machine learning pipeline for credit risk prediction, comparing ANFIS (Adaptive Neuro-Fuzzy Inference System) against classical supervised learning baselines (Random Forest and SVM).
 
 ## Project Structure
@@ -46,6 +49,16 @@ uv sync --extra dev
 pre-commit install
 ```
 
+### Setup with venv + pip (recommended for local/WSL)
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -e .[dev]
+```
+
 ### Verify setup
 
 ```bash
@@ -54,7 +67,7 @@ ruff check src/
 ruff format --check src/
 
 # Type checking
-mypy src/
+mypy src/ --ignore-missing-imports
 
 # Security scan
 bandit -r src/ -c pyproject.toml
