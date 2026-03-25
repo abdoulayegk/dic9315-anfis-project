@@ -83,7 +83,7 @@ jobs:
             pytest
 
       - name: Upload test and coverage reports
-        uses: actions/upload-artifact@v4Slowly
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-and-coverage-reports
