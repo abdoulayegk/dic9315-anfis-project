@@ -82,16 +82,12 @@ jobs:
             anfis-ci:test \
             pytest
 
-      - name: Upload test and coverage reports
+      - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-and-coverage-reports
-          path: |
-            reports/coverage.xml
-            reports/junit.xml
-            reports/pytest_report.html
-            reports/coverage_html/
+          name: coverage-report
+          path: coverage.xml
 
   mutation-tests:
     name: Mutation Testing (Optional - Docker CPU)
@@ -141,8 +137,7 @@ jobs:
       - name: Download coverage report
         uses: actions/download-artifact@v4
         with:
-          name: test-and-coverage-reports
-          path: .
+          name: coverage-report
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
