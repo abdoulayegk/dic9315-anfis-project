@@ -109,7 +109,7 @@ class ModelEvaluator:
         if not self.results:
             print("No models evaluated yet")
             return None
-            
+
         # Create comparison DataFrame
         comparison = []
         for model_name, metrics in self.results.items():
