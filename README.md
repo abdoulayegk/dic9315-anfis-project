@@ -25,16 +25,26 @@ tests/
 Avec `uv` (recommandé) :
 
 ```bash
+# Installe toutes les dépendances y compris les outils de développement (mypy, pre-commit, bandit, ruff, etc.)
 uv sync --extra dev
-pre-commit install   # hooks de qualité avant chaque commit
+
+# Configure les hooks de qualité avant chaque commit
+pre-commit install
+pre-commit run --all-files  # Vérifier que tout fonctionne
 ```
 
 Avec `pip` :
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
+
+# Installe les dépendances de base + dev
 pip install -r requirements.txt
 pip install -e ".[dev]"
+
+# Configure les hooks de qualité avant chaque commit
+pre-commit install
+pre-commit run --all-files  # Vérifier que tout fonctionne
 ```
 
 ## Utilisation
@@ -56,13 +66,30 @@ mutmut results
 
 ## Qualité du code
 
+Les vérifications de qualité s'exécutent **automatiquement** via `pre-commit` avant chaque commit :
+
 ```bash
-ruff check src/          # lint
-ruff format --check src/ # formatage
-mypy src/ --ignore-missing-imports
-bandit -r src/ -c pyproject.toml
+# Affiche l'état sans modifier
 pre-commit run --all-files
+
+# Forcé à s'exécuter (même sur fichiers non modifiés)
+pre-commit run --all-files --verbose
 ```
+
+Ou manuellement :
+
+```bash
+ruff check src/          # Lint (E, F, I, N, W, UP, B, C4)
+ruff format --check src/ # Formatage (remplace Black)
+mypy src/ --ignore-missing-imports  # Type checking
+bandit -r src/ -c pyproject.toml    # Sécurité
+```
+
+**Outils pré-commit installés :**
+
+- **Ruff** : lint + formatage rapide
+- **MyPy** : vérification de types
+- **Bandit** : audit de sécurité
 
 ## Documentation (Sphinx)
 
