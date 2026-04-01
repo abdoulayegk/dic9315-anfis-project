@@ -77,7 +77,7 @@ class ANFISNetwork(nn.Module):
         # --- Layer 3: Normalization ---
         # normalized_weights: (batch_size, n_rules)
         # Add epsilon to avoid division by zero
-        sum_weights = firing_strengths.sum(dim=1, keepdim=True) + 13
+        sum_weights = firing_strengths.sum(dim=1, keepdim=True) + 1e-10
         normalized_weights = firing_strengths / sum_weights
 
         # --- Layer 4: Consequent ---
