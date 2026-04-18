@@ -2,12 +2,16 @@
 Feature selection module for dimensionality reduction (especially for ANFIS)
 """
 
+import logging
+
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import RFE, SelectKBest, f_classif, mutual_info_classif
 
 from . import config
+
+logger = logging.getLogger(__name__)
 
 
 class FeatureSelector:
@@ -39,10 +43,12 @@ class FeatureSelector:
         self.selected_features = [f[0] for f in sorted_features[: self.n_features]]
         self.scores = dict(sorted_features)
 
-        print("\nCorrelation-based feature selection:")
-        print(f"Selected {len(self.selected_features)} features")
+        logger.info(
+            "Correlation-based selection: %s features selected",
+            len(self.selected_features),
+        )
         for feat in self.selected_features:
-            print(f"  - {feat}: {self.scores[feat]:.4f}")
+            logger.debug("  %s: %.4f", feat, self.scores[feat])
 
         return self.selected_features, self.scores
 
@@ -67,10 +73,9 @@ class FeatureSelector:
         ]
         self.scores = dict(zip(feature_names, rfe.ranking_, strict=False))
 
-        print("\nRFE-based feature selection:")
-        print(f"Selected {len(self.selected_features)} features")
+        logger.info("RFE selection: %s features selected", len(self.selected_features))
         for feat in self.selected_features:
-            print(f"  - {feat} (rank: {self.scores[feat]})")
+            logger.debug("  %s (rank: %s)", feat, self.scores[feat])
 
         return self.selected_features, self.scores
 
@@ -93,10 +98,12 @@ class FeatureSelector:
         self.selected_features = [f[0] for f in feature_mi[: self.n_features]]
         self.scores = dict(feature_mi)
 
-        print("\nMutual Information-based feature selection:")
-        print(f"Selected {len(self.selected_features)} features")
+        logger.info(
+            "Mutual Information selection: %s features selected",
+            len(self.selected_features),
+        )
         for feat in self.selected_features:
-            print(f"  - {feat}: {self.scores[feat]:.4f}")
+            logger.debug("  %s: %.4f", feat, self.scores[feat])
 
         return self.selected_features, self.scores
 
@@ -118,10 +125,12 @@ class FeatureSelector:
         ]
         self.scores = dict(zip(feature_names, selector.scores_, strict=False))
 
-        print("\nUnivariate (ANOVA F-value) feature selection:")
-        print(f"Selected {len(self.selected_features)} features")
+        logger.info(
+            "Univariate (ANOVA) selection: %s features selected",
+            len(self.selected_features),
+        )
         for feat in self.selected_features:
-            print(f"  - {feat}: {self.scores[feat]:.4f}")
+            logger.debug("  %s: %.4f", feat, self.scores[feat])
 
         return self.selected_features, self.scores
 
@@ -144,7 +153,7 @@ class FeatureSelector:
             elif method == "univariate":
                 features, _ = self.univariate_selection(X, y)
             else:
-                print(f"Unknown method: {method}")
+                logger.warning("Unknown feature selection method: %s", method)
                 continue
 
             all_selected.extend(features)
@@ -159,10 +168,15 @@ class FeatureSelector:
         self.selected_features = [f[0] for f in most_common]
         self.scores = dict(feature_counts)
 
-        print(f"\nEnsemble feature selection (methods: {methods}):")
-        print(f"Selected {len(self.selected_features)} features")
+        logger.info(
+            "Ensemble selection (methods=%s): %s features selected",
+            methods,
+            len(self.selected_features),
+        )
         for feat in self.selected_features:
-            print(f"  - {feat}: appeared in {self.scores[feat]}/{len(methods)} methods")
+            logger.debug(
+                "  %s: appeared in %s/%s methods", feat, self.scores[feat], len(methods)
+            )
 
         return self.selected_features, self.scores
 

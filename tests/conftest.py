@@ -1,8 +1,9 @@
 import sys
-import pytest
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from pathlib import Path
+import pytest
 
 # Rendre la racine du projet importable depuis les tests (package `src`)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -27,19 +28,21 @@ def sample_data():
     """Dataset synthétique crédit — 200 lignes, 10 features."""
     np.random.seed(42)
     n = 200
-    X = pd.DataFrame({
-        'LIMIT_BAL': np.random.uniform(10000, 500000, n),
-        'AGE':       np.random.randint(20, 75, n).astype(float),
-        'PAY_0':     np.random.randint(-1, 9, n).astype(float),
-        'PAY_2':     np.random.randint(-1, 9, n).astype(float),
-        'PAY_3':     np.random.randint(-1, 9, n).astype(float),
-        'BILL_AMT1': np.random.uniform(0, 50000, n),
-        'BILL_AMT2': np.random.uniform(0, 50000, n),
-        'PAY_AMT1':  np.random.uniform(0, 10000, n),
-        'PAY_AMT2':  np.random.uniform(0, 10000, n),
-        'PAY_AMT3':  np.random.uniform(0, 10000, n),
-    })
-    y = pd.Series(np.random.randint(0, 2, n), name='default')
+    X = pd.DataFrame(
+        {
+            "LIMIT_BAL": np.random.uniform(10000, 500000, n),
+            "AGE": np.random.randint(20, 75, n).astype(float),
+            "PAY_0": np.random.randint(-1, 9, n).astype(float),
+            "PAY_2": np.random.randint(-1, 9, n).astype(float),
+            "PAY_3": np.random.randint(-1, 9, n).astype(float),
+            "BILL_AMT1": np.random.uniform(0, 50000, n),
+            "BILL_AMT2": np.random.uniform(0, 50000, n),
+            "PAY_AMT1": np.random.uniform(0, 10000, n),
+            "PAY_AMT2": np.random.uniform(0, 10000, n),
+            "PAY_AMT3": np.random.uniform(0, 10000, n),
+        }
+    )
+    y = pd.Series(np.random.randint(0, 2, n), name="default")
     return X, y
 
 
@@ -48,19 +51,21 @@ def small_data():
     """Dataset minimal — 50 lignes pour tests rapides."""
     np.random.seed(42)
     n = 50
-    X = pd.DataFrame({
-        'LIMIT_BAL': np.random.uniform(10000, 500000, n),
-        'AGE':       np.random.randint(20, 75, n).astype(float),
-        'PAY_0':     np.random.randint(-1, 9, n).astype(float),
-        'PAY_2':     np.random.randint(-1, 9, n).astype(float),
-        'PAY_3':     np.random.randint(-1, 9, n).astype(float),
-        'BILL_AMT1': np.random.uniform(0, 50000, n),
-        'BILL_AMT2': np.random.uniform(0, 50000, n),
-        'PAY_AMT1':  np.random.uniform(0, 10000, n),
-        'PAY_AMT2':  np.random.uniform(0, 10000, n),
-        'PAY_AMT3':  np.random.uniform(0, 10000, n),
-    })
-    y = pd.Series(np.random.randint(0, 2, n), name='default')
+    X = pd.DataFrame(
+        {
+            "LIMIT_BAL": np.random.uniform(10000, 500000, n),
+            "AGE": np.random.randint(20, 75, n).astype(float),
+            "PAY_0": np.random.randint(-1, 9, n).astype(float),
+            "PAY_2": np.random.randint(-1, 9, n).astype(float),
+            "PAY_3": np.random.randint(-1, 9, n).astype(float),
+            "BILL_AMT1": np.random.uniform(0, 50000, n),
+            "BILL_AMT2": np.random.uniform(0, 50000, n),
+            "PAY_AMT1": np.random.uniform(0, 10000, n),
+            "PAY_AMT2": np.random.uniform(0, 10000, n),
+            "PAY_AMT3": np.random.uniform(0, 10000, n),
+        }
+    )
+    y = pd.Series(np.random.randint(0, 2, n), name="default")
     return X, y
 
 
@@ -84,6 +89,7 @@ def feature_selector():
 def trained_rf(sample_data):
     """Random Forest déjà entraîné — réutilisable sans retrain."""
     from sklearn.ensemble import RandomForestClassifier
+
     X, y = sample_data
     model = RandomForestClassifier(n_estimators=10, random_state=42)
     model.fit(X, y)

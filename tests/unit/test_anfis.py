@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import torch
-
 from src.anfis_network import ANFISNetwork, GaussianMF
 from src.models import ANFISClassifier
 

@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  dozzle:
+    container_name: dozzle
+    image: amir20/dozzle:latest
+    restart: unless-stopped
+    environment:
+      - DOZZLE_LEVEL=info
+      - DOZZLE_HOSTNAME=anfis-project
+      - DOZZLE_NO_ANALYTICS=true
+      - DOZZLE_FILTER=name=anfis
+      - DOZZLE_TIMEOUT=30s
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - dozzle_data:/data
+    ports:
+      - "8880:8080"
+    healthcheck:
+      test: ["CMD", "/dozzle", "healthcheck"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  anfis:
+    container_name: anfis
+    image: anfis:latest
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    environment:
+      - LOG_LEVEL=INFO
+    ports:
+      - "8808:8888"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+volumes:
+  dozzle_data:

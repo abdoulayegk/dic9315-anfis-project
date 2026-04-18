@@ -2,6 +2,8 @@
 Model definitions and training functions
 """
 
+import logging
+
 import numpy as np
 import pandas as pd
 import torch
@@ -17,6 +19,8 @@ from torch.utils.data import DataLoader, TensorDataset
 from . import config
 from .anfis_network import ANFISNetwork
 
+logger = logging.getLogger(__name__)
+
 
 class ModelTrainer:
     """Train and optimize different models"""
@@ -30,9 +34,9 @@ class ModelTrainer:
         self, X_train, y_train, cv=config.CV_FOLDS, search_type="grid", n_iter=20
     ):
         """Train and optimize Random Forest"""
-        print("\n" + "=" * 80)
-        print("TRAINING RANDOM FOREST")
-        print("=" * 80)
+        logger.info(
+            "Training Random Forest (search_type=%s, n_iter=%s)", search_type, n_iter
+        )
 
         rf = RandomForestClassifier(random_state=self.random_seed, n_jobs=-1)
 
@@ -62,8 +66,8 @@ class ModelTrainer:
         self.models["random_forest"] = search.best_estimator_
         self.best_params["random_forest"] = search.best_params_
 
-        print(f"\nBest parameters: {search.best_params_}")
-        print(f"Best CV F1 score: {search.best_score_:.4f}")
+        logger.info("Random Forest best parameters: %s", search.best_params_)
+        logger.info("Random Forest best CV F1: %.4f", search.best_score_)
 
         return search.best_estimator_, search.best_params_
 
@@ -71,9 +75,7 @@ class ModelTrainer:
         self, X_train, y_train, cv=config.CV_FOLDS, search_type="randomized", n_iter=20
     ):
         """Train and optimize SVM"""
-        print("\n" + "=" * 80)
-        print("TRAINING SVM")
-        print("=" * 80)
+        logger.info("Training SVM (search_type=%s, n_iter=%s)", search_type, n_iter)
 
         svm = SVC(random_state=self.random_seed, probability=True)
 
@@ -98,8 +100,8 @@ class ModelTrainer:
         self.models["svm"] = search.best_estimator_
         self.best_params["svm"] = search.best_params_
 
-        print(f"\nBest parameters: {search.best_params_}")
-        print(f"Best CV F1 score: {search.best_score_:.4f}")
+        logger.info("SVM best parameters: %s", search.best_params_)
+        logger.info("SVM best CV F1: %.4f", search.best_score_)
 
         return search.best_estimator_, search.best_params_
 
@@ -107,9 +109,7 @@ class ModelTrainer:
         """
         Train ANFIS model using PyTorch implementation
         """
-        print("\n" + "=" * 80)
-        print("TRAINING ANFIS (PyTorch Implementation)")
-        print("=" * 80)
+        logger.info("Training ANFIS (PyTorch Implementation)")
 
         try:
             # Initialize ANFIS Classifier
@@ -120,11 +120,13 @@ class ModelTrainer:
                 batch_size=config.ANFIS_CONFIG.get("batch_size", 32),
             )
 
-            print("Configuration:")
-            print(f"  - Input features: {X_train.shape[1]}")
-            print(f"  - Number of rules: {anfis.n_rules}")
-            print(f"  - Max epochs: {anfis.max_epochs}")
-            print(f"  - Learning rate: {anfis.learning_rate}")
+            logger.info(
+                "ANFIS config | features=%s rules=%s epochs=%s lr=%s",
+                X_train.shape[1],
+                anfis.n_rules,
+                anfis.max_epochs,
+                anfis.learning_rate,
+            )
 
             # Fit model
             anfis.fit(X_train, y_train)
@@ -132,15 +134,12 @@ class ModelTrainer:
             self.models["anfis"] = anfis
             self.best_params["anfis"] = config.ANFIS_CONFIG
 
-            print("\nANFIS training completed successfully!")
+            logger.info("ANFIS training completed successfully")
 
             return anfis, config.ANFIS_CONFIG
 
         except Exception as e:
-            print(f"ANFIS training failed: {e}")
-            import traceback
-
-            traceback.print_exc()
+            logger.exception("ANFIS training failed: %s", e)
             return None, None
 
     def get_model(self, model_name):
@@ -199,7 +198,8 @@ class ANFISClassifier(BaseEstimator, ClassifierMixin):
         dataset = TensorDataset(X_tensor, y_tensor)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
-        print(f"Starting training for {self.max_epochs} epochs...")
+        _fit_logger = logging.getLogger(__name__ + ".ANFISClassifier")
+        _fit_logger.info("Starting training for %s epochs...", self.max_epochs)
 
         self.model.train()
         self.loss_history = []
@@ -231,7 +231,9 @@ class ANFISClassifier(BaseEstimator, ClassifierMixin):
             self.loss_history.append(avg_loss)
 
             if (epoch + 1) % 10 == 0:
-                print(f"  Epoch [{epoch + 1}/{self.max_epochs}], Loss: {avg_loss:.4f}")
+                _fit_logger.debug(
+                    "Epoch [%s/%s] Loss: %.4f", epoch + 1, self.max_epochs, avg_loss
+                )
 
         return self
 

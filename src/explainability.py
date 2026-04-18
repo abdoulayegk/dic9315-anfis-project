@@ -2,6 +2,7 @@
 SHAP-based explainability analysis for credit risk models
 """
 
+import logging
 import warnings
 from pathlib import Path
 
@@ -12,6 +13,8 @@ import seaborn as sns
 import shap
 
 from . import config
+
+logger = logging.getLogger(__name__)
 
 
 class SHAPExplainer:
@@ -44,9 +47,7 @@ class SHAPExplainer:
         model_type : str
             Type of explainer: 'tree', 'kernel', or 'linear'
         """
-        print(f"\n{'=' * 80}")
-        print(f"Creating SHAP explainer for {model_name}")
-        print(f"{'=' * 80}")
+        logger.info("Creating SHAP explainer for %s (type=%s)", model_name, model_type)
 
         # Convert to DataFrame if needed
         if isinstance(X_train, np.ndarray):
@@ -68,20 +69,20 @@ class SHAPExplainer:
                 raise ValueError(f"Unknown model type: {model_type}")
 
             self.explainers[model_name] = explainer
-            print(f"SHAP explainer created for {model_name}")
+            logger.info("SHAP explainer created for %s", model_name)
 
             return explainer
 
         except Exception as e:
-            print(f"Error creating explainer for {model_name}: {e}")
+            logger.exception("Error creating SHAP explainer for %s: %s", model_name, e)
             return None
 
     def calculate_shap_values(self, model_name, X_test):
         """Calculate SHAP values for test set"""
-        print(f"\nCalculating SHAP values for {model_name}...")
+        logger.info("Calculating SHAP values for %s", model_name)
 
         if model_name not in self.explainers:
-            print(f"No explainer found for {model_name}")
+            logger.warning("No SHAP explainer found for %s", model_name)
             return None
 
         explainer = self.explainers[model_name]
@@ -107,11 +108,13 @@ class SHAPExplainer:
                 ),
             }
 
-            print(f"SHAP values calculated: {shap_values.shape}")
+            logger.info(
+                "SHAP values calculated for %s: shape=%s", model_name, shap_values.shape
+            )
             return shap_values
 
         except Exception as e:
-            print(f"Error calculating SHAP values: {e}")
+            logger.exception("Error calculating SHAP values for %s: %s", model_name, e)
             return None
 
     def plot_summary(self, model_name, max_display=20):
@@ -126,10 +129,10 @@ class SHAPExplainer:
             Maximum number of features to display
         """
         if model_name not in self.shap_values:
-            print(f"No SHAP values found for {model_name}")
+            logger.warning("No SHAP values found for %s", model_name)
             return
 
-        print(f"\nGenerating SHAP summary plot for {model_name}...")
+        logger.info("Generating SHAP summary plot for %s", model_name)
 
         shap_data = self.shap_values[model_name]
 

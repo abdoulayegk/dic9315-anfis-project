@@ -1,11 +1,10 @@
+from types import SimpleNamespace
+
+import matplotlib
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from types import SimpleNamespace
-
-import matplotlib
-
 from src.explainability import SHAPExplainer
 
 matplotlib.use("Agg")
@@ -167,7 +166,9 @@ def test_plot_methods_generate_expected_files(tmp_path, monkeypatch):
     monkeypatch.setattr("src.explainability.shap.summary_plot", _noop_summary_plot)
     monkeypatch.setattr("src.explainability.shap.force_plot", _noop_force_plot)
     monkeypatch.setattr("src.explainability.shap.waterfall_plot", _noop_waterfall_plot)
-    monkeypatch.setattr("src.explainability.shap.dependence_plot", _noop_dependence_plot)
+    monkeypatch.setattr(
+        "src.explainability.shap.dependence_plot", _noop_dependence_plot
+    )
 
     explainer = SHAPExplainer(output_dir=tmp_path)
     X = pd.DataFrame(
@@ -226,6 +227,4 @@ def test_compare_models_importance_returns_dataframe_and_writes_outputs(tmp_path
     assert comparison_df is not None
     assert not comparison_df.empty
     assert (tmp_path / "plots" / "shap_comparison_models.png").exists()
-    assert (
-        tmp_path / "results" / "shap_feature_importance_comparison.csv"
-    ).exists()
+    assert (tmp_path / "results" / "shap_feature_importance_comparison.csv").exists()

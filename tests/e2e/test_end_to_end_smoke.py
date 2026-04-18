@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-
 from src.data_preprocessing import DataPreprocessor
 from src.evaluation import ModelEvaluator
 from src.feature_selection import FeatureSelector

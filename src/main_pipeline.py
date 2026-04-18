@@ -2,6 +2,7 @@
 Main pipeline orchestrating the complete credit risk prediction workflow
 """
 
+import logging
 import sys
 from pathlib import Path
 
@@ -14,6 +15,8 @@ from .evaluation import ModelEvaluator
 from .feature_selection import FeatureSelector
 from .models import ModelTrainer
 
+logger = logging.getLogger(__name__)
+
 
 def setup_directories():
     """Create necessary output directories"""
@@ -21,7 +24,7 @@ def setup_directories():
     Path(config.MODELS_DIR).mkdir(exist_ok=True)
     Path(config.PLOTS_DIR).mkdir(exist_ok=True)
     Path(config.REPORTS_DIR).mkdir(exist_ok=True)
-    print("Output directories created")
+    logger.info("Output directories created")
 
 
 def main(data_path, target_column="default"):
@@ -35,9 +38,9 @@ def main(data_path, target_column="default"):
     target_column : str
         Name of the target column
     """
-    print("\n" + "=" * 80)
-    print(" CREDIT RISK PREDICTION PIPELINE - ANFIS vs BASELINES")
-    print("=" * 80)
+    logger.info("=" * 80)
+    logger.info(" CREDIT RISK PREDICTION PIPELINE - ANFIS vs BASELINES")
+    logger.info("=" * 80)
 
     # Setup
     setup_directories()
@@ -54,16 +57,16 @@ def main(data_path, target_column="default"):
         winsorize=config.USE_WINSORIZATION,
     )
 
-    print(f"\nFinal training set shape: {X_train.shape}")
-    print(f"Final test set shape: {X_test.shape}")
+    logger.info("Final training set shape: %s", X_train.shape)
+    logger.info("Final test set shape: %s", X_test.shape)
 
     # ========================================================================
     # STEP 2: FEATURE SELECTION (for ANFIS)
     # ========================================================================
     if config.USE_FEATURE_SELECTION:
-        print("\n" + "=" * 80)
-        print("FEATURE SELECTION FOR ANFIS")
-        print("=" * 80)
+        logger.info("=" * 80)
+        logger.info("FEATURE SELECTION FOR ANFIS")
+        logger.info("=" * 80)
 
         selector = FeatureSelector(
             n_features=config.N_FEATURES_ANFIS, random_seed=config.RANDOM_SEED
@@ -78,7 +81,7 @@ def main(data_path, target_column="default"):
         X_train_anfis = selector.transform(X_train)
         X_test_anfis = selector.transform(X_test)
 
-        print(f"\nReduced feature set for ANFIS: {X_train_anfis.shape}")
+        logger.info("Reduced feature set for ANFIS: %s", X_train_anfis.shape)
     else:
         X_train_anfis = X_train
         X_test_anfis = X_test
@@ -106,37 +109,45 @@ def main(data_path, target_column="default"):
     # ========================================================================
     # STEP 4: CROSS-VALIDATION FOR STATISTICAL TESTING
     # ========================================================================
-    print("\n" + "=" * 80)
-    print("CROSS-VALIDATION FOR STATISTICAL SIGNIFICANCE")
-    print("=" * 80)
+    logger.info("=" * 80)
+    logger.info("CROSS-VALIDATION FOR STATISTICAL SIGNIFICANCE")
+    logger.info("=" * 80)
 
     cv_scores = {}
 
     # Random Forest CV
-    print("\nRandom Forest cross-validation...")
+    logger.info("Random Forest cross-validation...")
     cv_scores["Random Forest"] = cross_val_score(
         rf_model, X_train, y_train, cv=config.CV_FOLDS_FINAL, scoring="f1", n_jobs=-1
     )
-    print(f"  CV F1 scores: {cv_scores['Random Forest']}")
-    print(
-        f"  Mean: {cv_scores['Random Forest'].mean():.4f} (+/- {cv_scores['Random Forest'].std():.4f})"
+    logger.debug("RF CV F1 scores: %s", cv_scores["Random Forest"])
+    logger.info(
+        "RF CV Mean: %.4f (+/- %.4f)",
+        cv_scores["Random Forest"].mean(),
+        cv_scores["Random Forest"].std(),
     )
 
     # SVM CV
-    print("\nSVM cross-validation...")
+    logger.info("SVM cross-validation...")
     cv_scores["SVM"] = cross_val_score(
         svm_model, X_train, y_train, cv=config.CV_FOLDS_FINAL, scoring="f1", n_jobs=-1
     )
-    print(f"  CV F1 scores: {cv_scores['SVM']}")
-    print(f"  Mean: {cv_scores['SVM'].mean():.4f} (+/- {cv_scores['SVM'].std():.4f})")
+    logger.debug("SVM CV F1 scores: %s", cv_scores["SVM"])
+    logger.info(
+        "SVM CV Mean: %.4f (+/- %.4f)",
+        cv_scores["SVM"].mean(),
+        cv_scores["SVM"].std(),
+    )
 
     # ANFIS CV (placeholder - would need actual implementation)
     if anfis_model is not None:
-        print("\nANFIS cross-validation...")
+        logger.info("ANFIS cross-validation...")
         # cv_scores['ANFIS'] = cross_val_score(anfis_model, X_train_anfis, y_train, ...)
         # For now, create dummy scores as placeholder
         cv_scores["ANFIS"] = np.random.uniform(0.7, 0.8, config.CV_FOLDS_FINAL)
-        print("  (Placeholder scores - requires actual ANFIS implementation)")
+        logger.warning(
+            "ANFIS CV using placeholder scores — requires actual ANFIS implementation"
+        )
 
     # ========================================================================
     # STEP 5: FINAL EVALUATION ON TEST SET
@@ -156,9 +167,9 @@ def main(data_path, target_column="default"):
     # ========================================================================
     # STEP 6: COMPARISON & VISUALIZATION
     # ========================================================================
-    print("\n" + "=" * 80)
-    print("GENERATING COMPARISON REPORTS")
-    print("=" * 80)
+    logger.info("=" * 80)
+    logger.info("GENERATING COMPARISON REPORTS")
+    logger.info("=" * 80)
 
     # Compare models
     comparison_df = evaluator.compare_models()
@@ -181,39 +192,37 @@ def main(data_path, target_column="default"):
         significance_df = evaluator.statistical_significance_test(
             cv_scores, test="wilcoxon"
         )
-        print("\nStatistical significance (Wilcoxon):")
-        print(significance_df.to_string())
+        logger.info(
+            "Statistical significance (Wilcoxon):\n%s", significance_df.to_string()
+        )
 
     # ========================================================================
     # STEP 7: INTERPRETABILITY ANALYSIS (for ANFIS)
     # ========================================================================
     if anfis_model is not None:
-        print("\n" + "=" * 80)
-        print("ANFIS INTERPRETABILITY ANALYSIS")
-        print("=" * 80)
-        print("\nExtracting fuzzy rules from ANFIS model...")
-        print(
+        logger.info("=" * 80)
+        logger.info("ANFIS INTERPRETABILITY ANALYSIS")
+        logger.info("=" * 80)
+        logger.info("Extracting fuzzy rules from ANFIS model...")
+        logger.debug(
             "(This would show the generated rules and their business logic coherence)"
         )
-        print("Example rule format:")
-        print(
-            "  IF Payment_History is 'Late' AND Credit_Limit is 'Low' THEN Risk is 'High'"
+        logger.info(
+            "Example rule format: IF Payment_History is 'Late' AND Credit_Limit is 'Low' THEN Risk is 'High'"
         )
-        print("\nNote: Requires actual ANFIS implementation to extract rules")
+        logger.warning("Note: Requires actual ANFIS implementation to extract rules")
 
     # ========================================================================
     # FINAL SUMMARY
     # ========================================================================
-    print("\n" + "=" * 80)
-    print("PIPELINE COMPLETED SUCCESSFULLY")
-    print("=" * 80)
-    print(f"\nAll results saved to: {config.OUTPUT_DIR}")
-    print("\nGenerated files:")
-    print("  - model_comparison.csv")
-    print("  - statistical_significance.csv")
-    print("  - confusion_matrices.png")
-    print("  - roc_curves.png")
-    print("  - metrics_comparison.png")
+    logger.info("=" * 80)
+    logger.info("PIPELINE COMPLETED SUCCESSFULLY")
+    logger.info("=" * 80)
+    logger.info("All results saved to: %s", config.OUTPUT_DIR)
+    logger.info(
+        "Generated files: model_comparison.csv, statistical_significance.csv, "
+        "confusion_matrices.png, roc_curves.png, metrics_comparison.png"
+    )
 
     return {
         "models": models_dict,
@@ -233,16 +242,16 @@ if __name__ == "__main__":
     else:
         # Default path (update this to your actual file)
         data_file = "data/default_credit_card_clients.csv"
-        print(f"\nNo data file specified. Using default: {data_file}")
-        print("Usage: python main_pipeline.py <path_to_data_file>")
+        logger.info("No data file specified. Using default: %s", data_file)
+        logger.info("Usage: python main_pipeline.py <path_to_data_file>")
 
     # Check if file exists
     if not Path(data_file).exists():
-        print(f"\nError: Data file not found: {data_file}")
-        print("\nPlease download the 'Default of Credit Card Clients' dataset from:")
-        print("https://archive.ics.uci.edu/ml/datasets/default+of+credit+card+clients")
-        print("\nOr provide the path as an argument:")
-        print("python main_pipeline.py /path/to/your/data.csv")
+        logger.error("Data file not found: %s", data_file)
+        logger.error(
+            "Please download the 'Default of Credit Card Clients' dataset from: "
+            "https://archive.ics.uci.edu/ml/datasets/default+of+credit+card+clients"
+        )
         sys.exit(1)
 
     # Run pipeline
@@ -251,4 +260,4 @@ if __name__ == "__main__":
         target_column="default payment next month",  # Adjust based on your dataset
     )
 
-    print("\nPipeline execution complete!")
+    logger.info("Pipeline execution complete!")

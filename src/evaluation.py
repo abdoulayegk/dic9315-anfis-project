@@ -2,6 +2,7 @@
 Model evaluation metrics and statistical significance testing
 """
 
+import logging
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -21,6 +22,8 @@ from sklearn.metrics import (
 )
 
 from . import config
+
+logger = logging.getLogger(__name__)
 
 # Color palette
 COLORS = ["#7400ff", "#a788e4", "#d216d2", "#ffb500", "#36c9dd"]
@@ -43,9 +46,7 @@ class ModelEvaluator:
 
     def evaluate_single_model(self, model, X_test, y_test, model_name):
         """Evaluate a single model on test set"""
-        print(f"\n{'=' * 80}")
-        print(f"EVALUATING {model_name.upper()}")
-        print(f"{'=' * 80}")
+        logger.info("Evaluating %s", model_name)
 
         # Predictions
         y_pred = model.predict(X_test)
@@ -69,7 +70,7 @@ class ModelEvaluator:
         try:
             metrics["auc_roc"] = roc_auc_score(y_test, y_proba)
         except Exception as e:
-            print(f"Warning: Could not calculate AUC-ROC: {e}")
+            logger.warning("Could not calculate AUC-ROC for %s: %s", model_name, e)
             metrics["auc_roc"] = np.nan
 
         # Confusion matrix
@@ -88,26 +89,29 @@ class ModelEvaluator:
         self.results[model_name] = metrics
 
         # Print results
-        print(f"\nMetrics for {model_name}:")
-        print(f"  Accuracy:  {metrics['accuracy']:.4f}")
-        print(f"  Precision: {metrics['precision']:.4f}")
-        print(f"  Recall (Sensitivity): {metrics['recall']:.4f}")
-        print(f"  Specificity: {metrics['specificity']:.4f}")
-        print(f"  F1-Score:  {metrics['f1_score']:.4f}")
-        print(f"  AUC-ROC:   {metrics['auc_roc']:.4f}")
-
-        print("\nConfusion Matrix:")
-        print(cm)
-
-        print("\nClassification Report:")
-        print(classification_report(y_test, y_pred, zero_division=0))
+        logger.info(
+            "%s | Accuracy=%.4f Precision=%.4f Recall=%.4f Specificity=%.4f F1=%.4f AUC=%.4f",
+            model_name,
+            metrics["accuracy"],
+            metrics["precision"],
+            metrics["recall"],
+            metrics["specificity"],
+            metrics["f1_score"],
+            metrics["auc_roc"],
+        )
+        logger.debug("%s confusion matrix:\n%s", model_name, cm)
+        logger.debug(
+            "%s classification report:\n%s",
+            model_name,
+            classification_report(y_test, y_pred, zero_division=0),
+        )
 
         return metrics
 
     def compare_models(self):
         """Create comparison table of all evaluated models"""
         if not self.results:
-            print("No models evaluated yet")
+            logger.warning("No models evaluated yet")
             return None
 
         # Create comparison DataFrame
@@ -128,15 +132,12 @@ class ModelEvaluator:
         df_comparison = pd.DataFrame(comparison)
         df_comparison = df_comparison.round(4)
 
-        print("\n" + "=" * 80)
-        print("MODEL COMPARISON")
-        print("=" * 80)
-        print(df_comparison.to_string(index=False))
+        logger.info("Model comparison:\n%s", df_comparison.to_string(index=False))
 
         # Save to CSV
         output_file = self.output_dir / "model_comparison.csv"
         df_comparison.to_csv(output_file, index=False)
-        print(f"\nComparison saved to: {output_file}")
+        logger.info("Comparison saved to: %s", output_file)
 
         return df_comparison
 
@@ -144,7 +145,7 @@ class ModelEvaluator:
         """Plot confusion matrices for all models"""
         n_models = len(self.results)
         if n_models == 0:
-            print("No models to plot")
+            logger.warning("No models to plot")
             return
 
         fig, axes = plt.subplots(1, n_models, figsize=(6 * n_models, 5))
@@ -168,7 +169,7 @@ class ModelEvaluator:
         plt.tight_layout()
         output_file = self.output_dir / "confusion_matrices.png"
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
-        print(f"Confusion matrices saved to: {output_file}")
+        logger.info("Confusion matrices saved to: %s", output_file)
         plt.close()
 
     def plot_roc_curves(self, models_dict, X_test, y_test):
@@ -200,13 +201,13 @@ class ModelEvaluator:
 
         output_file = self.output_dir / "roc_curves.png"
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
-        print(f"ROC curves saved to: {output_file}")
+        logger.info("ROC curves saved to: %s", output_file)
         plt.close()
 
     def plot_metrics_comparison(self):
         """Bar plot comparing key metrics across models"""
         if not self.results:
-            print("No models to compare")
+            logger.warning("No models to compare")
             return
 
         metrics_to_plot = ["accuracy", "precision", "recall", "f1_score", "auc_roc"]
@@ -233,7 +234,7 @@ class ModelEvaluator:
         plt.tight_layout()
         output_file = self.output_dir / "metrics_comparison.png"
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
-        print(f"Metrics comparison saved to: {output_file}")
+        logger.info("Metrics comparison saved to: %s", output_file)
         plt.close()
 
     def statistical_significance_test(self, cv_scores_dict, test="wilcoxon"):
@@ -248,8 +249,9 @@ class ModelEvaluator:
             'wilcoxon' for Wilcoxon signed-rank test or 'ttest' for paired t-test
         """
         print("\n" + "=" * 80)
-        print("STATISTICAL SIGNIFICANCE TESTING")
-        print("=" * 80)
+        logger.info("=" * 80)
+        logger.info("STATISTICAL SIGNIFICANCE TESTING")
+        logger.info("=" * 80)
 
         model_names = list(cv_scores_dict.keys())
         results = []
@@ -283,10 +285,15 @@ class ModelEvaluator:
                     }
                 )
 
-                print(f"\n{model1} vs {model2}:")
-                print(f"  {test_name} p-value: {p_value:.6f}")
-                print(f"  Statistically significant: {significant}")
-                print(f"  Mean difference: {np.mean(scores1) - np.mean(scores2):.6f}")
+                logger.info(
+                    "%s vs %s | %s p-value=%.6f significant=%s mean_diff=%.6f",
+                    model1,
+                    model2,
+                    test_name,
+                    p_value,
+                    significant,
+                    np.mean(scores1) - np.mean(scores2),
+                )
 
         # Create DataFrame
         df_results = pd.DataFrame(results)
@@ -294,7 +301,7 @@ class ModelEvaluator:
         # Save results
         output_file = self.output_dir / "statistical_significance.csv"
         df_results.to_csv(output_file, index=False)
-        print(f"\n\nStatistical test results saved to: {output_file}")
+        logger.info("Statistical test results saved to: %s", output_file)
 
         return df_results
 

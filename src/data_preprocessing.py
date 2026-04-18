@@ -2,6 +2,8 @@
 Data preprocessing pipeline for credit risk prediction
 """
 
+import logging
+
 import numpy as np
 import pandas as pd
 from imblearn.over_sampling import SMOTE
@@ -10,6 +12,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
 from . import config
+
+logger = logging.getLogger(__name__)
 
 
 class DataPreprocessor:
@@ -63,17 +67,18 @@ class DataPreprocessor:
         else:
             raise ValueError("Unsupported file format. Use CSV or Excel.")
 
-        print(f"Dataset loaded: {df.shape[0]} rows, {df.shape[1]} columns")
+        logger.info("Dataset loaded: %s rows, %s columns", df.shape[0], df.shape[1])
         return df
 
     def check_missing_values(self, df):
         """Check and report missing values"""
         missing = df.isnull().sum()
         if missing.sum() > 0:
-            print("\nMissing values detected:")
-            print(missing[missing > 0])
+            logger.warning(
+                "Missing values detected:\n%s", missing[missing > 0].to_string()
+            )
         else:
-            print("\nNo missing values detected.")
+            logger.info("No missing values detected.")
         return missing
 
     def remove_missing_critical(self, df, critical_columns=None):
@@ -86,7 +91,7 @@ class DataPreprocessor:
 
         removed = len(df) - len(df_clean)
         if removed > 0:
-            print(f"Removed {removed} rows with missing critical values")
+            logger.info("Removed %s rows with missing critical values", removed)
         return df_clean
 
     def detect_outliers(self, df, columns, threshold=config.OUTLIER_THRESHOLD):
@@ -99,8 +104,10 @@ class DataPreprocessor:
                 outliers = np.where(z_scores > threshold)[0]
                 outlier_indices.update(outliers)
 
-        print(
-            f"\nDetected {len(outlier_indices)} rows with outliers (z-score > {threshold})"
+        logger.info(
+            "Detected %s rows with outliers (z-score > %s)",
+            len(outlier_indices),
+            threshold,
         )
         return list(outlier_indices)
 
@@ -112,7 +119,7 @@ class DataPreprocessor:
             if col in df.columns and df[col].dtype in ["int64", "float64"]:
                 df_winsorized[col] = stats.mstats.winsorize(df[col], limits=limits)
 
-        print(f"Winsorized {len(columns)} numerical columns")
+        logger.info("Winsorized %s numerical columns", len(columns))
         return df_winsorized
 
     def identify_column_types(self, df, target_col):
@@ -134,11 +141,15 @@ class DataPreprocessor:
         if target_col in self.numerical_columns:
             self.numerical_columns.remove(target_col)
 
-        print(
-            f"\nCategorical columns ({len(self.categorical_columns)}): {self.categorical_columns}"
+        logger.debug(
+            "Categorical columns (%s): %s",
+            len(self.categorical_columns),
+            self.categorical_columns,
         )
-        print(
-            f"Numerical columns ({len(self.numerical_columns)}): {self.numerical_columns}"
+        logger.debug(
+            "Numerical columns (%s): %s",
+            len(self.numerical_columns),
+            self.numerical_columns,
         )
 
         return self.categorical_columns, self.numerical_columns
@@ -152,10 +163,12 @@ class DataPreprocessor:
             encoded_df = pd.get_dummies(
                 df, columns=categorical_columns, drop_first=False
             )
-            print(f"One-hot encoded {len(categorical_columns)} categorical columns")
+            logger.info(
+                "One-hot encoded %s categorical columns", len(categorical_columns)
+            )
         else:
             encoded_df = df.copy()
-            print("No categorical columns to encode")
+            logger.debug("No categorical columns to encode")
 
         return encoded_df
 
@@ -164,7 +177,7 @@ class DataPreprocessor:
         X_train_scaled = self.scaler.fit_transform(X_train)
         X_test_scaled = self.scaler.transform(X_test)
 
-        print("Features normalized using MinMaxScaler")
+        logger.info("Features normalized using MinMaxScaler")
         return X_train_scaled, X_test_scaled
 
     def split_data(self, df, target_col, test_size=0.2):
@@ -182,12 +195,14 @@ class DataPreprocessor:
             X, y, test_size=test_size, random_state=self.random_seed, stratify=y
         )
 
-        print(f"\nData split: Train={len(X_train)}, Test={len(X_test)}")
-        print(
-            f"Class distribution in train: {y_train.value_counts(normalize=True).to_dict()}"
+        logger.info("Data split: Train=%s, Test=%s", len(X_train), len(X_test))
+        logger.debug(
+            "Class distribution in train: %s",
+            y_train.value_counts(normalize=True).to_dict(),
         )
-        print(
-            f"Class distribution in test: {y_test.value_counts(normalize=True).to_dict()}"
+        logger.debug(
+            "Class distribution in test: %s",
+            y_test.value_counts(normalize=True).to_dict(),
         )
 
         return X_train, X_test, y_train, y_test
@@ -204,21 +219,22 @@ class DataPreprocessor:
 
         X_balanced, y_balanced = smote.fit_resample(X_train, y_train)
 
-        print("\nSMOTE applied:")
-        print(
-            f"Before: {X_train.shape}, Class distribution: {pd.Series(y_train).value_counts().to_dict()}"
+        logger.info(
+            "SMOTE applied: %s -> %s samples", X_train.shape[0], X_balanced.shape[0]
         )
-        print(
-            f"After: {X_balanced.shape}, Class distribution: {pd.Series(y_balanced).value_counts().to_dict()}"
+        logger.debug(
+            "Before: %s dist=%s | After: %s dist=%s",
+            X_train.shape,
+            pd.Series(y_train).value_counts().to_dict(),
+            X_balanced.shape,
+            pd.Series(y_balanced).value_counts().to_dict(),
         )
 
         return X_balanced, y_balanced
 
     def full_pipeline(self, filepath, target_col, apply_smote=True, winsorize=True):
         """Execute full preprocessing pipeline"""
-        print("=" * 80)
-        print("STARTING DATA PREPROCESSING PIPELINE")
-        print("=" * 80)
+        logger.info("Starting data preprocessing pipeline")
 
         # Load data
         df = self.load_data(filepath)
@@ -255,9 +271,12 @@ class DataPreprocessor:
         y_train = self._ensure_1d_target(y_train)
         y_test = self._ensure_1d_target(y_test)
 
-        print("\n" + "=" * 80)
-        print("PREPROCESSING COMPLETED")
-        print("=" * 80)
+        logger.info(
+            "Preprocessing completed — train=%s, test=%s, features=%s",
+            X_train.shape,
+            X_test.shape,
+            len(self.feature_names),
+        )
 
         return X_train, X_test, y_train, y_test, self.feature_names
 
