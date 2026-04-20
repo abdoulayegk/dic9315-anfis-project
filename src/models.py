@@ -4,6 +4,7 @@ Model definitions and training functions
 
 import logging
 
+import mlflow
 import numpy as np
 import pandas as pd
 import torch
@@ -20,6 +21,11 @@ from . import config
 from .anfis_network import ANFISNetwork
 
 logger = logging.getLogger(__name__)
+
+
+def _mlflow_active() -> bool:
+    """True iff an MLflow run is currently active — lets helpers no-op cleanly."""
+    return mlflow.active_run() is not None
 
 
 class ModelTrainer:
@@ -61,7 +67,13 @@ class ModelTrainer:
                 verbose=1,
             )
 
-        search.fit(X_train, y_train)
+        mlflow.sklearn.autolog(log_models=True, log_input_examples=False, silent=True)
+        with mlflow.start_run(run_name="random_forest", nested=_mlflow_active()):
+            mlflow.log_param("search_type", search_type)
+            mlflow.log_param("search_n_iter", n_iter)
+            search.fit(X_train, y_train)
+            mlflow.log_metric("rf_best_cv_f1", float(search.best_score_))
+        mlflow.sklearn.autolog(disable=True)
 
         self.models["random_forest"] = search.best_estimator_
         self.best_params["random_forest"] = search.best_params_
@@ -95,7 +107,13 @@ class ModelTrainer:
                 verbose=1,
             )
 
-        search.fit(X_train, y_train)
+        mlflow.sklearn.autolog(log_models=True, log_input_examples=False, silent=True)
+        with mlflow.start_run(run_name="svm", nested=_mlflow_active()):
+            mlflow.log_param("search_type", search_type)
+            mlflow.log_param("search_n_iter", n_iter)
+            search.fit(X_train, y_train)
+            mlflow.log_metric("svm_best_cv_f1", float(search.best_score_))
+        mlflow.sklearn.autolog(disable=True)
 
         self.models["svm"] = search.best_estimator_
         self.best_params["svm"] = search.best_params_
@@ -112,29 +130,47 @@ class ModelTrainer:
         logger.info("Training ANFIS (PyTorch Implementation)")
 
         try:
-            # Initialize ANFIS Classifier
-            anfis = ANFISClassifier(
-                n_rules=config.ANFIS_CONFIG.get("n_rules", 10),
-                max_epochs=config.ANFIS_CONFIG["max_epochs"],
-                learning_rate=config.ANFIS_CONFIG["learning_rate"],
-                batch_size=config.ANFIS_CONFIG.get("batch_size", 32),
-            )
+            with mlflow.start_run(run_name="anfis", nested=_mlflow_active()):
+                # Initialize ANFIS Classifier
+                anfis = ANFISClassifier(
+                    n_rules=config.ANFIS_CONFIG.get("n_rules", 10),
+                    max_epochs=config.ANFIS_CONFIG["max_epochs"],
+                    learning_rate=config.ANFIS_CONFIG["learning_rate"],
+                    batch_size=config.ANFIS_CONFIG.get("batch_size", 32),
+                )
 
-            logger.info(
-                "ANFIS config | features=%s rules=%s epochs=%s lr=%s",
-                X_train.shape[1],
-                anfis.n_rules,
-                anfis.max_epochs,
-                anfis.learning_rate,
-            )
+                mlflow.log_params(
+                    {
+                        "anfis_n_rules": anfis.n_rules,
+                        "anfis_max_epochs": anfis.max_epochs,
+                        "anfis_learning_rate": anfis.learning_rate,
+                        "anfis_batch_size": anfis.batch_size,
+                        "anfis_n_membership_functions": config.ANFIS_CONFIG[
+                            "n_membership_functions"
+                        ],
+                        "anfis_membership_type": config.ANFIS_CONFIG["membership_type"],
+                        "anfis_n_features": int(X_train.shape[1]),
+                    }
+                )
 
-            # Fit model
-            anfis.fit(X_train, y_train)
+                logger.info(
+                    "ANFIS config | features=%s rules=%s epochs=%s lr=%s",
+                    X_train.shape[1],
+                    anfis.n_rules,
+                    anfis.max_epochs,
+                    anfis.learning_rate,
+                )
 
-            self.models["anfis"] = anfis
-            self.best_params["anfis"] = config.ANFIS_CONFIG
+                # Fit model — loss per epoch is logged inside ANFISClassifier.fit
+                anfis.fit(X_train, y_train)
 
-            logger.info("ANFIS training completed successfully")
+                if anfis.loss_history:
+                    mlflow.log_metric("anfis_final_loss", anfis.loss_history[-1])
+
+                self.models["anfis"] = anfis
+                self.best_params["anfis"] = config.ANFIS_CONFIG
+
+                logger.info("ANFIS training completed successfully")
 
             return anfis, config.ANFIS_CONFIG
 
@@ -203,6 +239,7 @@ class ANFISClassifier(BaseEstimator, ClassifierMixin):
 
         self.model.train()
         self.loss_history = []
+        track_epochs = _mlflow_active()
 
         for epoch in range(self.max_epochs):
             epoch_loss = 0.0
@@ -229,6 +266,9 @@ class ANFISClassifier(BaseEstimator, ClassifierMixin):
 
             avg_loss = epoch_loss / len(dataloader)
             self.loss_history.append(avg_loss)
+
+            if track_epochs:
+                mlflow.log_metric("anfis_loss", avg_loss, step=epoch)
 
             if (epoch + 1) % 10 == 0:
                 _fit_logger.debug(

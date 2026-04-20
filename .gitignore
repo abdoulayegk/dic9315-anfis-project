@@ -109,5 +109,14 @@ plots/
 reports/
 .mutmut-cache/
 
+# MLflow local artifact store (runs, models, logs — regenerated on every run,
+# can reach hundreds of MB after a few pipeline executions)
+mlruns/
+mlflow.db
+mlflow-export/
+
+# Claude Code local workspace config
+.claude/
+
 # Results/outputs (optional - uncomment if you want to track these)
 # models/

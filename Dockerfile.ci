@@ -35,4 +35,13 @@ COPY . /app
 
 # Default command: Jupyter Lab (can be overridden at runtime)
 # For testing: docker run ... pytest -v
-CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
+# Token/password disabled for local dev convenience — the stack is bound to
+# localhost via docker-compose and not exposed to the network.
+CMD ["jupyter", "lab", \
+     "--ip=0.0.0.0", \
+     "--port=8888", \
+     "--no-browser", \
+     "--allow-root", \
+     "--ServerApp.token=", \
+     "--ServerApp.password=", \
+     "--ServerApp.disable_check_xsrf=True"]

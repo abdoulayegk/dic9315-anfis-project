@@ -3,9 +3,11 @@ Model evaluation metrics and statistical significance testing
 """
 
 import logging
+import re
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import mlflow
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -27,6 +29,29 @@ logger = logging.getLogger(__name__)
 
 # Color palette
 COLORS = ["#7400ff", "#a788e4", "#d216d2", "#ffb500", "#36c9dd"]
+
+
+def _sanitize_metric_name(name: str) -> str:
+    """MLflow only allows alphanumerics, underscore, dash, dot, space, slash, colon."""
+    return re.sub(r"[^\w\-. :/]", "_", name).lower()
+
+
+def _log_mlflow_metric(key: str, value) -> None:
+    if mlflow.active_run() is None:
+        return
+    try:
+        mlflow.log_metric(_sanitize_metric_name(key), float(value))
+    except (TypeError, ValueError):
+        pass
+
+
+def _log_mlflow_artifact(path: Path) -> None:
+    if mlflow.active_run() is None:
+        return
+    try:
+        mlflow.log_artifact(str(path))
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.debug("MLflow artifact log skipped for %s: %s", path, exc)
 
 
 class ModelEvaluator:
@@ -99,6 +124,19 @@ class ModelEvaluator:
             metrics["f1_score"],
             metrics["auc_roc"],
         )
+
+        # Mirror the six evaluation metrics to the active MLflow run, prefixed
+        # by model so RF/SVM/ANFIS stay distinguishable in the parent run.
+        prefix = _sanitize_metric_name(model_name)
+        for metric_key in (
+            "accuracy",
+            "precision",
+            "recall",
+            "f1_score",
+            "auc_roc",
+            "specificity",
+        ):
+            _log_mlflow_metric(f"{prefix}_{metric_key}", metrics[metric_key])
         logger.debug("%s confusion matrix:\n%s", model_name, cm)
         logger.debug(
             "%s classification report:\n%s",
@@ -138,6 +176,7 @@ class ModelEvaluator:
         output_file = self.output_dir / "model_comparison.csv"
         df_comparison.to_csv(output_file, index=False)
         logger.info("Comparison saved to: %s", output_file)
+        _log_mlflow_artifact(output_file)
 
         return df_comparison
 
@@ -170,6 +209,7 @@ class ModelEvaluator:
         output_file = self.output_dir / "confusion_matrices.png"
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         logger.info("Confusion matrices saved to: %s", output_file)
+        _log_mlflow_artifact(output_file)
         plt.close()
 
     def plot_roc_curves(self, models_dict, X_test, y_test):
@@ -202,6 +242,7 @@ class ModelEvaluator:
         output_file = self.output_dir / "roc_curves.png"
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         logger.info("ROC curves saved to: %s", output_file)
+        _log_mlflow_artifact(output_file)
         plt.close()
 
     def plot_metrics_comparison(self):
@@ -235,6 +276,7 @@ class ModelEvaluator:
         output_file = self.output_dir / "metrics_comparison.png"
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         logger.info("Metrics comparison saved to: %s", output_file)
+        _log_mlflow_artifact(output_file)
         plt.close()
 
     def statistical_significance_test(self, cv_scores_dict, test="wilcoxon"):
@@ -302,6 +344,7 @@ class ModelEvaluator:
         output_file = self.output_dir / "statistical_significance.csv"
         df_results.to_csv(output_file, index=False)
         logger.info("Statistical test results saved to: %s", output_file)
+        _log_mlflow_artifact(output_file)
 
         return df_results
 

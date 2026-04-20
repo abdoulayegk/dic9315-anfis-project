@@ -6,6 +6,7 @@ import logging
 import sys
 from pathlib import Path
 
+import mlflow
 import numpy as np
 from sklearn.model_selection import cross_val_score
 
@@ -27,6 +28,23 @@ def setup_directories():
     logger.info("Output directories created")
 
 
+def _log_pipeline_config():
+    """Log pipeline-wide configuration to the active MLflow run."""
+    mlflow.log_params(
+        {
+            "random_seed": config.RANDOM_SEED,
+            "cv_folds": config.CV_FOLDS,
+            "cv_folds_final": config.CV_FOLDS_FINAL,
+            "use_smote": config.USE_SMOTE,
+            "smote_strategy": config.SMOTE_SAMPLING_STRATEGY,
+            "use_winsorization": config.USE_WINSORIZATION,
+            "use_feature_selection": config.USE_FEATURE_SELECTION,
+            "n_features_anfis": config.N_FEATURES_ANFIS,
+            "train_test_split": config.TRAIN_TEST_SPLIT,
+        }
+    )
+
+
 def main(data_path, target_column="default"):
     """
     Main pipeline execution
@@ -45,184 +63,239 @@ def main(data_path, target_column="default"):
     # Setup
     setup_directories()
 
-    # ========================================================================
-    # STEP 1: DATA PREPROCESSING
-    # ========================================================================
-    preprocessor = DataPreprocessor(random_seed=config.RANDOM_SEED)
+    with mlflow.start_run(run_name="pipeline_complet") as parent_run:
+        logger.info("MLflow parent run: %s", parent_run.info.run_id)
+        _log_pipeline_config()
 
-    X_train, X_test, y_train, y_test, feature_names = preprocessor.full_pipeline(
-        filepath=data_path,
-        target_col=target_column,
-        apply_smote=config.USE_SMOTE,
-        winsorize=config.USE_WINSORIZATION,
-    )
+        # ====================================================================
+        # STEP 1: DATA PREPROCESSING
+        # ====================================================================
+        preprocessor = DataPreprocessor(random_seed=config.RANDOM_SEED)
 
-    logger.info("Final training set shape: %s", X_train.shape)
-    logger.info("Final test set shape: %s", X_test.shape)
+        X_train, X_test, y_train, y_test, feature_names = preprocessor.full_pipeline(
+            filepath=data_path,
+            target_col=target_column,
+            apply_smote=config.USE_SMOTE,
+            winsorize=config.USE_WINSORIZATION,
+        )
 
-    # ========================================================================
-    # STEP 2: FEATURE SELECTION (for ANFIS)
-    # ========================================================================
-    if config.USE_FEATURE_SELECTION:
+        logger.info("Final training set shape: %s", X_train.shape)
+        logger.info("Final test set shape: %s", X_test.shape)
+        mlflow.log_metrics(
+            {
+                "train_rows": X_train.shape[0],
+                "train_cols": X_train.shape[1],
+                "test_rows": X_test.shape[0],
+                "test_cols": X_test.shape[1],
+                "positive_class_ratio": float(np.mean(y_train)),
+            }
+        )
+
+        # ====================================================================
+        # STEP 2: FEATURE SELECTION (for ANFIS)
+        # ====================================================================
+        if config.USE_FEATURE_SELECTION:
+            logger.info("=" * 80)
+            logger.info("FEATURE SELECTION FOR ANFIS")
+            logger.info("=" * 80)
+
+            selector = FeatureSelector(
+                n_features=config.N_FEATURES_ANFIS, random_seed=config.RANDOM_SEED
+            )
+
+            # Use ensemble method for robust selection
+            selected_features, feature_scores = selector.ensemble_selection(
+                X_train, y_train, methods=["rfe", "mutual_info", "correlation"]
+            )
+
+            # Transform data for ANFIS
+            X_train_anfis = selector.transform(X_train)
+            X_test_anfis = selector.transform(X_test)
+
+            logger.info("Reduced feature set for ANFIS: %s", X_train_anfis.shape)
+            mlflow.log_dict(
+                {"selected_features": list(selected_features)},
+                "feature_selection/selected_features.json",
+            )
+            if isinstance(feature_scores, dict):
+                mlflow.log_dict(
+                    {str(k): float(v) for k, v in feature_scores.items()},
+                    "feature_selection/scores.json",
+                )
+        else:
+            X_train_anfis = X_train
+            X_test_anfis = X_test
+
+        # ====================================================================
+        # STEP 3: MODEL TRAINING & OPTIMIZATION
+        # ====================================================================
+        trainer = ModelTrainer(random_seed=config.RANDOM_SEED)
+
+        # Random Forest
+        rf_model, rf_params = trainer.train_random_forest(
+            X_train,
+            y_train,
+            cv=config.CV_FOLDS,
+            search_type="randomized",
+            n_iter=20,
+        )
+
+        # SVM
+        svm_model, svm_params = trainer.train_svm(
+            X_train,
+            y_train,
+            cv=config.CV_FOLDS,
+            search_type="randomized",
+            n_iter=20,
+        )
+
+        # ANFIS (on reduced feature set)
+        anfis_model, anfis_params = trainer.train_anfis(
+            X_train_anfis, y_train, n_features=config.N_FEATURES_ANFIS
+        )
+
+        # ====================================================================
+        # STEP 4: CROSS-VALIDATION FOR STATISTICAL TESTING
+        # ====================================================================
         logger.info("=" * 80)
-        logger.info("FEATURE SELECTION FOR ANFIS")
+        logger.info("CROSS-VALIDATION FOR STATISTICAL SIGNIFICANCE")
         logger.info("=" * 80)
 
-        selector = FeatureSelector(
-            n_features=config.N_FEATURES_ANFIS, random_seed=config.RANDOM_SEED
+        cv_scores = {}
+
+        # Random Forest CV
+        logger.info("Random Forest cross-validation...")
+        cv_scores["Random Forest"] = cross_val_score(
+            rf_model,
+            X_train,
+            y_train,
+            cv=config.CV_FOLDS_FINAL,
+            scoring="f1",
+            n_jobs=-1,
         )
-
-        # Use ensemble method for robust selection
-        selected_features, feature_scores = selector.ensemble_selection(
-            X_train, y_train, methods=["rfe", "mutual_info", "correlation"]
-        )
-
-        # Transform data for ANFIS
-        X_train_anfis = selector.transform(X_train)
-        X_test_anfis = selector.transform(X_test)
-
-        logger.info("Reduced feature set for ANFIS: %s", X_train_anfis.shape)
-    else:
-        X_train_anfis = X_train
-        X_test_anfis = X_test
-
-    # ========================================================================
-    # STEP 3: MODEL TRAINING & OPTIMIZATION
-    # ========================================================================
-    trainer = ModelTrainer(random_seed=config.RANDOM_SEED)
-
-    # Random Forest
-    rf_model, rf_params = trainer.train_random_forest(
-        X_train, y_train, cv=config.CV_FOLDS, search_type="randomized", n_iter=20
-    )
-
-    # SVM
-    svm_model, svm_params = trainer.train_svm(
-        X_train, y_train, cv=config.CV_FOLDS, search_type="randomized", n_iter=20
-    )
-
-    # ANFIS (on reduced feature set)
-    anfis_model, anfis_params = trainer.train_anfis(
-        X_train_anfis, y_train, n_features=config.N_FEATURES_ANFIS
-    )
-
-    # ========================================================================
-    # STEP 4: CROSS-VALIDATION FOR STATISTICAL TESTING
-    # ========================================================================
-    logger.info("=" * 80)
-    logger.info("CROSS-VALIDATION FOR STATISTICAL SIGNIFICANCE")
-    logger.info("=" * 80)
-
-    cv_scores = {}
-
-    # Random Forest CV
-    logger.info("Random Forest cross-validation...")
-    cv_scores["Random Forest"] = cross_val_score(
-        rf_model, X_train, y_train, cv=config.CV_FOLDS_FINAL, scoring="f1", n_jobs=-1
-    )
-    logger.debug("RF CV F1 scores: %s", cv_scores["Random Forest"])
-    logger.info(
-        "RF CV Mean: %.4f (+/- %.4f)",
-        cv_scores["Random Forest"].mean(),
-        cv_scores["Random Forest"].std(),
-    )
-
-    # SVM CV
-    logger.info("SVM cross-validation...")
-    cv_scores["SVM"] = cross_val_score(
-        svm_model, X_train, y_train, cv=config.CV_FOLDS_FINAL, scoring="f1", n_jobs=-1
-    )
-    logger.debug("SVM CV F1 scores: %s", cv_scores["SVM"])
-    logger.info(
-        "SVM CV Mean: %.4f (+/- %.4f)",
-        cv_scores["SVM"].mean(),
-        cv_scores["SVM"].std(),
-    )
-
-    # ANFIS CV (placeholder - would need actual implementation)
-    if anfis_model is not None:
-        logger.info("ANFIS cross-validation...")
-        # cv_scores['ANFIS'] = cross_val_score(anfis_model, X_train_anfis, y_train, ...)
-        # For now, create dummy scores as placeholder
-        cv_scores["ANFIS"] = np.random.uniform(0.7, 0.8, config.CV_FOLDS_FINAL)
-        logger.warning(
-            "ANFIS CV using placeholder scores — requires actual ANFIS implementation"
-        )
-
-    # ========================================================================
-    # STEP 5: FINAL EVALUATION ON TEST SET
-    # ========================================================================
-    evaluator = ModelEvaluator(output_dir=config.OUTPUT_DIR)
-
-    # Evaluate Random Forest
-    evaluator.evaluate_single_model(rf_model, X_test, y_test, "Random Forest")
-
-    # Evaluate SVM
-    evaluator.evaluate_single_model(svm_model, X_test, y_test, "SVM")
-
-    # Evaluate ANFIS (if implemented)
-    if anfis_model is not None:
-        evaluator.evaluate_single_model(anfis_model, X_test_anfis, y_test, "ANFIS")
-
-    # ========================================================================
-    # STEP 6: COMPARISON & VISUALIZATION
-    # ========================================================================
-    logger.info("=" * 80)
-    logger.info("GENERATING COMPARISON REPORTS")
-    logger.info("=" * 80)
-
-    # Compare models
-    comparison_df = evaluator.compare_models()
-
-    # Plot confusion matrices
-    evaluator.plot_confusion_matrices()
-
-    # Plot ROC curves
-    models_dict = {"Random Forest": rf_model, "SVM": svm_model}
-    if anfis_model is not None:
-        models_dict["ANFIS"] = anfis_model
-
-    evaluator.plot_roc_curves(models_dict, X_test, y_test)
-
-    # Plot metrics comparison
-    evaluator.plot_metrics_comparison()
-
-    # Statistical significance testing
-    if len(cv_scores) >= 2:
-        significance_df = evaluator.statistical_significance_test(
-            cv_scores, test="wilcoxon"
-        )
+        logger.debug("RF CV F1 scores: %s", cv_scores["Random Forest"])
         logger.info(
-            "Statistical significance (Wilcoxon):\n%s", significance_df.to_string()
+            "RF CV Mean: %.4f (+/- %.4f)",
+            cv_scores["Random Forest"].mean(),
+            cv_scores["Random Forest"].std(),
+        )
+        mlflow.log_metrics(
+            {
+                "rf_cv_f1_mean": float(cv_scores["Random Forest"].mean()),
+                "rf_cv_f1_std": float(cv_scores["Random Forest"].std()),
+            }
         )
 
-    # ========================================================================
-    # STEP 7: INTERPRETABILITY ANALYSIS (for ANFIS)
-    # ========================================================================
-    if anfis_model is not None:
-        logger.info("=" * 80)
-        logger.info("ANFIS INTERPRETABILITY ANALYSIS")
-        logger.info("=" * 80)
-        logger.info("Extracting fuzzy rules from ANFIS model...")
-        logger.debug(
-            "(This would show the generated rules and their business logic coherence)"
+        # SVM CV
+        logger.info("SVM cross-validation...")
+        cv_scores["SVM"] = cross_val_score(
+            svm_model,
+            X_train,
+            y_train,
+            cv=config.CV_FOLDS_FINAL,
+            scoring="f1",
+            n_jobs=-1,
         )
+        logger.debug("SVM CV F1 scores: %s", cv_scores["SVM"])
         logger.info(
-            "Example rule format: IF Payment_History is 'Late' AND Credit_Limit is 'Low' THEN Risk is 'High'"
+            "SVM CV Mean: %.4f (+/- %.4f)",
+            cv_scores["SVM"].mean(),
+            cv_scores["SVM"].std(),
         )
-        logger.warning("Note: Requires actual ANFIS implementation to extract rules")
+        mlflow.log_metrics(
+            {
+                "svm_cv_f1_mean": float(cv_scores["SVM"].mean()),
+                "svm_cv_f1_std": float(cv_scores["SVM"].std()),
+            }
+        )
 
-    # ========================================================================
-    # FINAL SUMMARY
-    # ========================================================================
-    logger.info("=" * 80)
-    logger.info("PIPELINE COMPLETED SUCCESSFULLY")
-    logger.info("=" * 80)
-    logger.info("All results saved to: %s", config.OUTPUT_DIR)
-    logger.info(
-        "Generated files: model_comparison.csv, statistical_significance.csv, "
-        "confusion_matrices.png, roc_curves.png, metrics_comparison.png"
-    )
+        # ANFIS CV (placeholder - would need actual implementation)
+        if anfis_model is not None:
+            logger.info("ANFIS cross-validation...")
+            # cv_scores['ANFIS'] = cross_val_score(anfis_model, X_train_anfis, y_train, ...)
+            # For now, create dummy scores as placeholder
+            cv_scores["ANFIS"] = np.random.uniform(0.7, 0.8, config.CV_FOLDS_FINAL)
+            logger.warning(
+                "ANFIS CV using placeholder scores — requires actual ANFIS implementation"
+            )
+
+        # ====================================================================
+        # STEP 5: FINAL EVALUATION ON TEST SET
+        # ====================================================================
+        evaluator = ModelEvaluator(output_dir=config.OUTPUT_DIR)
+
+        # Evaluate Random Forest
+        evaluator.evaluate_single_model(rf_model, X_test, y_test, "Random Forest")
+
+        # Evaluate SVM
+        evaluator.evaluate_single_model(svm_model, X_test, y_test, "SVM")
+
+        # Evaluate ANFIS (if implemented)
+        if anfis_model is not None:
+            evaluator.evaluate_single_model(anfis_model, X_test_anfis, y_test, "ANFIS")
+
+        # ====================================================================
+        # STEP 6: COMPARISON & VISUALIZATION
+        # ====================================================================
+        logger.info("=" * 80)
+        logger.info("GENERATING COMPARISON REPORTS")
+        logger.info("=" * 80)
+
+        # Compare models
+        comparison_df = evaluator.compare_models()
+
+        # Plot confusion matrices
+        evaluator.plot_confusion_matrices()
+
+        # Plot ROC curves
+        models_dict = {"Random Forest": rf_model, "SVM": svm_model}
+        if anfis_model is not None:
+            models_dict["ANFIS"] = anfis_model
+
+        evaluator.plot_roc_curves(models_dict, X_test, y_test)
+
+        # Plot metrics comparison
+        evaluator.plot_metrics_comparison()
+
+        # Statistical significance testing
+        if len(cv_scores) >= 2:
+            significance_df = evaluator.statistical_significance_test(
+                cv_scores, test="wilcoxon"
+            )
+            logger.info(
+                "Statistical significance (Wilcoxon):\n%s",
+                significance_df.to_string(),
+            )
+
+        # ====================================================================
+        # STEP 7: INTERPRETABILITY ANALYSIS (for ANFIS)
+        # ====================================================================
+        if anfis_model is not None:
+            logger.info("=" * 80)
+            logger.info("ANFIS INTERPRETABILITY ANALYSIS")
+            logger.info("=" * 80)
+            logger.info("Extracting fuzzy rules from ANFIS model...")
+            logger.debug(
+                "(This would show the generated rules and their business logic coherence)"
+            )
+            logger.info(
+                "Example rule format: IF Payment_History is 'Late' AND Credit_Limit is 'Low' THEN Risk is 'High'"
+            )
+            logger.warning(
+                "Note: Requires actual ANFIS implementation to extract rules"
+            )
+
+        # ====================================================================
+        # FINAL SUMMARY
+        # ====================================================================
+        logger.info("=" * 80)
+        logger.info("PIPELINE COMPLETED SUCCESSFULLY")
+        logger.info("=" * 80)
+        logger.info("All results saved to: %s", config.OUTPUT_DIR)
+        logger.info(
+            "Generated files: model_comparison.csv, statistical_significance.csv, "
+            "confusion_matrices.png, roc_curves.png, metrics_comparison.png"
+        )
 
     return {
         "models": models_dict,

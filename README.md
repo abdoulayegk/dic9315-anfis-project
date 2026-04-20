@@ -119,6 +119,28 @@ docker run -p 8888:8888 ghcr.io/hayou-azizkd/mgl7760_projet_equipe3:main
 
 Tags disponibles : `main`, `develop`, SHA de commit (ex. `b0c0325`).
 
+## Observabilité
+
+Stack de monitoring pensée pour un contexte **ML research** (pas d'API HTTP, pas de latence à tracer) : les métriques produites par les entraînements RF/SVM/ANFIS et les ressources des conteneurs sont exposées via quatre services orchestrés par `docker-compose.yml`.
+
+| Service    | UI / endpoint                   | Rôle                                                             |
+| ---------- | ------------------------------- | ---------------------------------------------------------------- |
+| `anfis`    | <http://localhost:8808>         | Jupyter Lab + pipeline Python instrumenté MLflow                 |
+| `mlflow`   | <http://localhost:5001>         | Tracking server — runs, hyperparams, 6 métriques, artefacts      |
+| `dozzle`   | <http://localhost:8880>         | Vue live des logs de tous les conteneurs                         |
+| `cadvisor` | <http://localhost:8081>         | Métriques ressources conteneur au format Prometheus (`/metrics`) |
+
+```bash
+docker compose up -d                                            # démarre les 4 services
+docker compose exec anfis python -m src.main_pipeline           # produit 1 parent run + 3 runs enfants
+curl -fsS http://localhost:5001/health                          # MLflow healthcheck
+curl -fsS http://localhost:8081/metrics | head -n 20            # preuve d'exposition Prometheus
+```
+
+Les runs sont persistés dans le volume nommé `mlruns` — `docker compose down` ne les efface pas (ajouter `-v` pour purger). Le pipeline et le notebook pointent par défaut sur `http://mlflow:5000` (variable `MLFLOW_TRACKING_URI`) avec bascule automatique sur `file:./mlruns` si le serveur est injoignable, pour rester exécutable hors Docker.
+
+**Expériences :** le pipeline `.py` écrit dans `anfis-credit-risk`, le notebook dans `anfis-notebook` — deux contextes distincts dans l'UI MLflow pour comparer reproductibilité script vs exploration interactive.
+
 ## CI/CD (GitHub Actions)
 
 Le workflow `.github/workflows/ci.yml` enchaîne :
