@@ -101,6 +101,7 @@ capture_*.sh
 
 # Sphinx (generated site; tracked sources are under docs/source/)
 docs/build/
+docs/guide_integration_latex/
 
 # Generated outputs (do not push)
 results/
