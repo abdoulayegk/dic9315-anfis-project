@@ -7,11 +7,14 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.6
     hooks:
-      # Lint and auto-fix issues
+      # Lint only (no auto-fix) — pre-commit must never modify files,
+      # otherwise its stash/unstash dance conflicts with in-flight edits
+      # and rolls back the fixes. Run `make fix` to auto-correct locally.
       - id: ruff
-        args: [--fix]
-      # Format code (replaces black)
+        args: [--no-fix]
+      # Format check only (no rewrite, same reason as above)
       - id: ruff-format
+        args: [--check]
 
 
   # MyPy - Static type checking
