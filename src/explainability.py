@@ -2,13 +2,19 @@
 SHAP-based explainability analysis for credit risk models
 """
 
+import logging
+import warnings
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 import shap
-from pathlib import Path
-import config
+
+from . import config
+
+logger = logging.getLogger(__name__)
 
 
 class SHAPExplainer:
@@ -41,9 +47,7 @@ class SHAPExplainer:
         model_type : str
             Type of explainer: 'tree', 'kernel', or 'linear'
         """
-        print(f"\n{'='*80}")
-        print(f"Creating SHAP explainer for {model_name}")
-        print(f"{'='*80}")
+        logger.info("Creating SHAP explainer for %s (type=%s)", model_name, model_type)
 
         # Convert to DataFrame if needed
         if isinstance(X_train, np.ndarray):
@@ -65,20 +69,20 @@ class SHAPExplainer:
                 raise ValueError(f"Unknown model type: {model_type}")
 
             self.explainers[model_name] = explainer
-            print(f"SHAP explainer created for {model_name}")
+            logger.info("SHAP explainer created for %s", model_name)
 
             return explainer
 
         except Exception as e:
-            print(f"Error creating explainer for {model_name}: {e}")
+            logger.exception("Error creating SHAP explainer for %s: %s", model_name, e)
             return None
 
     def calculate_shap_values(self, model_name, X_test):
         """Calculate SHAP values for test set"""
-        print(f"\nCalculating SHAP values for {model_name}...")
+        logger.info("Calculating SHAP values for %s", model_name)
 
         if model_name not in self.explainers:
-            print(f"No explainer found for {model_name}")
+            logger.warning("No SHAP explainer found for %s", model_name)
             return None
 
         explainer = self.explainers[model_name]
@@ -104,11 +108,13 @@ class SHAPExplainer:
                 ),
             }
 
-            print(f"SHAP values calculated: {shap_values.shape}")
+            logger.info(
+                "SHAP values calculated for %s: shape=%s", model_name, shap_values.shape
+            )
             return shap_values
 
         except Exception as e:
-            print(f"Error calculating SHAP values: {e}")
+            logger.exception("Error calculating SHAP values for %s: %s", model_name, e)
             return None
 
     def plot_summary(self, model_name, max_display=20):
@@ -123,28 +129,34 @@ class SHAPExplainer:
             Maximum number of features to display
         """
         if model_name not in self.shap_values:
-            print(f"No SHAP values found for {model_name}")
+            logger.warning("No SHAP values found for %s", model_name)
             return
 
-        print(f"\nGenerating SHAP summary plot for {model_name}...")
+        logger.info("Generating SHAP summary plot for %s", model_name)
 
         shap_data = self.shap_values[model_name]
 
         plt.figure(figsize=(12, 8))
-        shap.summary_plot(
-            shap_data["values"],
-            shap_data["data"],
-            max_display=max_display,
-            show=False,
-            color_bar_label="Feature Value",
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=".*global RNG was seeded by calling `np.random.seed`.*",
+                category=FutureWarning,
+            )
+            shap.summary_plot(
+                shap_data["values"],
+                shap_data["data"],
+                max_display=max_display,
+                show=False,
+                color_bar_label="Feature Value",
+            )
         plt.title(
             f"SHAP Summary Plot - {model_name}", fontsize=14, fontweight="bold", pad=20
         )
         plt.tight_layout()
 
         output_file = (
-            self.output_dir / f'shap_summary_{model_name.lower().replace(" ", "_")}.png'
+            self.output_dir / f"shap_summary_{model_name.lower().replace(' ', '_')}.png"
         )
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         print(f"Summary plot saved to: {output_file}")
@@ -187,7 +199,7 @@ class SHAPExplainer:
         plt.tight_layout()
 
         output_file = (
-            self.output_dir / f'shap_bar_{model_name.lower().replace(" ", "_")}.png'
+            self.output_dir / f"shap_bar_{model_name.lower().replace(' ', '_')}.png"
         )
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         print(f"Bar plot saved to: {output_file}")
@@ -236,7 +248,7 @@ class SHAPExplainer:
 
         output_file = (
             self.output_dir
-            / f'shap_force_{model_name.lower().replace(" ", "_")}_inst{instance_idx}.png'
+            / f"shap_force_{model_name.lower().replace(' ', '_')}_inst{instance_idx}.png"
         )
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         print(f"Force plot saved to: {output_file}")
@@ -296,7 +308,7 @@ class SHAPExplainer:
 
         output_file = (
             self.output_dir
-            / f'shap_waterfall_{model_name.lower().replace(" ", "_")}_inst{instance_idx}.png'
+            / f"shap_waterfall_{model_name.lower().replace(' ', '_')}_inst{instance_idx}.png"
         )
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         print(f"Waterfall plot saved to: {output_file}")
@@ -342,7 +354,7 @@ class SHAPExplainer:
 
         output_file = (
             self.output_dir
-            / f'shap_dependence_{model_name.lower().replace(" ", "_")}_{feature_name}.png'
+            / f"shap_dependence_{model_name.lower().replace(' ', '_')}_{feature_name}.png"
         )
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         print(f"Dependence plot saved to: {output_file}")
@@ -386,9 +398,9 @@ class SHAPExplainer:
         top_n : int
             Number of top features to display
         """
-        print(f"\n{'='*80}")
+        print(f"\n{'=' * 80}")
         print("COMPARING SHAP FEATURE IMPORTANCE ACROSS MODELS")
-        print(f"{'='*80}")
+        print(f"{'=' * 80}")
 
         # Collect importance for each model
         all_importance = {}

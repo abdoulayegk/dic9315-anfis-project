@@ -1,251 +1,180 @@
-# Credit Risk Prediction Pipeline: ANFIS vs Baseline Models
+# Prédiction du risque de crédit : ANFIS vs modèles de référence
 
-This project implements a complete machine learning pipeline for credit risk prediction, comparing ANFIS (Adaptive Neuro-Fuzzy Inference System) against classical supervised learning baselines (Random Forest and SVM).
+Projet de maîtrise comparant ANFIS (Adaptive Neuro-Fuzzy Inference System) à Random Forest et SVM sur le dataset UCI _Default of Credit Card Clients_.
 
-## Project Structure
+## Structure
 
 ```
-.
-├── src/                       # Source code directory
-│   ├── __init__.py           # Package initialization
-│   ├── config.py             # Configuration parameters
-│   ├── data_preprocessing.py  # Data loading and preprocessing
-│   ├── feature_selection.py   # Feature selection for ANFIS
-│   ├── models.py             # Model definitions and training
-│   ├── evaluation.py         # Evaluation metrics and visualization
-│   ├── explainability.py     # SHAP-based explainability analysis
-│   ├── anfis_network.py      # ANFIS neural network implementation
-│   ├── main_pipeline.py      # Main orchestration script
-│   ├── credit_student_pipeline.py  # Student/learning version
-│   ├── test_pipeline.py      # Pipeline tests
-│   └── test_anfis.py         # ANFIS-specific tests
-├── models/                    # Trained model storage
-├── plots/                     # Generated visualizations
-├── results/                   # Results and metrics
-├── reports/                   # Analysis reports
-├── methodology_section.md     # Detailed methodology documentation
-├── requirement.text           # Python dependencies
-└── README.md                  # This file
+src/
+├── config.py               # Paramètres globaux
+├── data_preprocessing.py   # Chargement et prétraitement
+├── feature_selection.py    # Sélection de variables pour ANFIS
+├── anfis_network.py        # Réseau ANFIS (PyTorch)
+├── models.py               # Entraînement des modèles
+├── evaluation.py           # Métriques et visualisations
+├── explainability.py       # Analyse SHAP
+└── main_pipeline.py        # Point d'entrée principal
+tests/
+├── unit/                   # Tests unitaires par module
+├── integration/            # Tests d'intégration du pipeline
+└── e2e/                    # Tests de bout en bout (smoke)
 ```
 
-## Getting Started
+## Installation
 
-### Prerequisites
-
-Install required packages:
+Avec `uv` (recommandé) :
 
 ```bash
-pip install -r requirement.text
+# Installe toutes les dépendances y compris les outils de développement (mypy, pre-commit, bandit, ruff, etc.)
+uv sync --extra dev
+
+# Configure les hooks de qualité avant chaque commit
+pre-commit install
+pre-commit run --all-files  # Vérifier que tout fonctionne
 ```
 
-Or install individually:
+Avec `pip` :
 
 ```bash
-pip install pandas numpy scikit-learn imbalanced-learn scikit-fuzzy matplotlib seaborn openpyxl xlrd
+python3 -m venv .venv && source .venv/bin/activate
+
+# Installe les dépendances de base + dev
+pip install -r requirements.txt
+pip install -e ".[dev]"
+
+# Configure les hooks de qualité avant chaque commit
+pre-commit install
+pre-commit run --all-files  # Vérifier que tout fonctionne
 ```
 
-### Dataset
-
-Download the "Default of Credit Card Clients" dataset from UCI Machine Learning Repository:
-https://archive.ics.uci.edu/ml/datasets/default+of+credit+card+clients
-
-Place the dataset in a `data/` directory or specify the path when running.
-
-### Running the Pipeline
+## Utilisation
 
 ```bash
-# From the root directory
-python src/main_pipeline.py path/to/your/dataset.csv
+# Lancer le pipeline complet
+python src/main_pipeline.py data/default_credit_card_clients.csv
 
-# Or run tests to verify everything works
-python src/test_pipeline.py
+# Tests automatisés (unitaires + intégration + e2e)
+pytest
 
-# Or run ANFIS-specific tests
-python src/test_anfis.py
+# Tests e2e seulement
+pytest tests/e2e -k smoke
 
-# Or modify src/config.py and run
-python src/main_pipeline.py
+# Tests de mutation (optionnel)
+mutmut run --paths-to-mutate src --tests-dir tests
+mutmut results
 ```
 
-## Pipeline Overview
+## Qualité du code
 
-### 1. Data Preprocessing (`src/data_preprocessing.py`)
+Les vérifications de qualité s'exécutent **automatiquement** via `pre-commit` avant chaque commit :
 
-- Missing value detection and handling
-- Outlier detection using z-scores
-- Winsorization of extreme values
-- One-hot encoding of categorical variables
-- MinMax normalization
-- Train/test split with stratification
-- SMOTE for class imbalance
+```bash
+# Affiche l'état sans modifier
+pre-commit run --all-files
 
-### 2. Feature Selection (`src/feature_selection.py`)
+# Forcé à s'exécuter (même sur fichiers non modifiés)
+pre-commit run --all-files --verbose
+```
 
-- **Purpose**: Reduce dimensionality for ANFIS (curse of dimensionality)
-- **Methods**:
-  - Recursive Feature Elimination (RFE)
-  - Mutual Information
-  - Correlation Analysis
-  - Univariate Statistical Tests (ANOVA F-value)
-  - Ensemble Selection (combines multiple methods)
-- **Output**: Top 5-10 most important features
+Ou manuellement :
 
-### 3. Model Training (`src/models.py`)
+```bash
+ruff check src/          # Lint (E, F, I, N, W, UP, B, C4)
+ruff format --check src/ # Formatage (remplace Black)
+mypy src/ --ignore-missing-imports  # Type checking
+bandit -r src/ -c pyproject.toml    # Sécurité
+```
 
-#### Random Forest (Baseline)
+**Outils pré-commit installés :**
 
-- Hyperparameter optimization via RandomizedSearchCV
-- Parameters: n_estimators, max_depth, min_samples_split, criterion
-- Class weight balancing
+- **Ruff** : lint + formatage rapide
+- **MyPy** : vérification de types
+- **Bandit** : audit de sécurité
 
-#### Support Vector Machine
+## Documentation (Sphinx)
 
-- RBF kernel for non-linear decision boundaries
-- Hyperparameters: C, gamma
-- Optimized for imbalanced data
+```bash
+uv run make -C docs html
+# Ouvrir docs/build/html/index.html
+```
 
-#### ANFIS (Main Model)
+Les pushes sur `main` ou `develop` déploient automatiquement la doc sur GitHub Pages.
 
-- Takagi-Sugeno fuzzy inference
-- Gaussian membership functions
-- Hybrid learning (LSE + gradient descent)
-- Subtractive clustering for rule generation
-- **Note**: Requires custom implementation or external library
+## Docker
 
-### 4. Evaluation (`src/evaluation.py`)
+Build local :
 
-#### Metrics
+```bash
+docker build -f Dockerfile.ci -t anfis:latest .
+docker run -p 8888:8888 anfis:latest              # Jupyter Lab
+docker run anfis:latest pytest -v --cov=src       # Tests
+```
 
-- **Accuracy**: Overall correctness
-- **Precision**: Positive predictive value
-- **Recall/Sensitivity**: True positive rate (critical for credit risk)
-- **F1-Score**: Harmonic mean of precision and recall
-- **AUC-ROC**: Area under ROC curve
-- **Specificity**: True negative rate
-- **Confusion Matrix**: Detailed error analysis
+Image publiée sur GHCR à chaque push :
 
-#### Statistical Significance Testing
+```bash
+docker run -p 8888:8888 ghcr.io/hayou-azizkd/mgl7760_projet_equipe3:main
+# Accès : http://localhost:8888 (token dans les logs)
+```
 
-- Wilcoxon signed-rank test
-- Paired t-test
-- Validates if performance differences are statistically significant
+Tags disponibles : `main`, `develop`, SHA de commit (ex. `b0c0325`).
 
-#### Visualizations
+## Observabilité
 
-- Confusion matrices for all models
-- ROC curves comparison
-- Metrics bar chart comparison
+Stack de monitoring pensée pour un contexte **ML research** (pas d'API HTTP, pas de latence à tracer) : les métriques produites par les entraînements RF/SVM/ANFIS et les ressources des conteneurs sont exposées via quatre services orchestrés par `docker-compose.yml`.
 
-### 5. Interpretability Analysis
+| Service    | UI / endpoint                   | Rôle                                                             |
+| ---------- | ------------------------------- | ---------------------------------------------------------------- |
+| `anfis`    | <http://localhost:8808>         | Jupyter Lab + pipeline Python instrumenté MLflow                 |
+| `mlflow`   | <http://localhost:5001>         | Tracking server — runs, hyperparams, 6 métriques, artefacts      |
+| `dozzle`   | <http://localhost:8880>         | Vue live des logs de tous les conteneurs                         |
+| `cadvisor` | <http://localhost:8081>         | Métriques ressources conteneur au format Prometheus (`/metrics`) |
 
-- Extraction and analysis of ANFIS fuzzy rules
-- Validation of rule coherence with financial domain knowledge
-- Comparison of "white box" (ANFIS) vs "black box" (SVM) interpretability
+```bash
+docker compose up -d                                            # démarre les 4 services
+docker compose exec anfis python -m src.main_pipeline           # produit 1 parent run + 3 runs enfants
+curl -fsS http://localhost:5001/health                          # MLflow healthcheck
+curl -fsS http://localhost:8081/metrics | head -n 20            # preuve d'exposition Prometheus
+```
+
+Les runs sont persistés dans le volume nommé `mlruns` — `docker compose down` ne les efface pas (ajouter `-v` pour purger). Le pipeline et le notebook pointent par défaut sur `http://mlflow:5000` (variable `MLFLOW_TRACKING_URI`) avec bascule automatique sur `file:./mlruns` si le serveur est injoignable, pour rester exécutable hors Docker.
+
+**Expériences :** le pipeline `.py` écrit dans `anfis-credit-risk`, le notebook dans `anfis-notebook` — deux contextes distincts dans l'UI MLflow pour comparer reproductibilité script vs exploration interactive.
+
+## CI/CD (GitHub Actions)
+
+Le workflow `.github/workflows/ci.yml` enchaîne :
+
+1. **Qualité & sécurité** — Ruff, MyPy, Bandit, `uv audit`
+2. **Tests** — pytest avec rapport de couverture (artefact `coverage.xml`)
+3. **Tests de mutation** — mutmut sur `data_preprocessing.py` et `feature_selection.py` (sur PR et branches principales)
+4. **SonarQube** — analyse de qualité et dette technique (sur PR et branches principales)
+5. **Documentation** — build Sphinx + déploiement GitHub Pages
+6. **Publication du package** — `uv build`, artefact `python-package`
+7. **Publication de l'image** — push vers GHCR, tag par branche/SHA/version sémantique
+
+## Pipeline de traitement
+
+1. **Prétraitement** (`data_preprocessing.py`) : détection de valeurs manquantes, winsorisation des extrêmes, encodage one-hot, normalisation MinMax, split stratifié, SMOTE
+2. **Sélection de variables** (`feature_selection.py`) : méthode d'ensemble — RFE, information mutuelle, corrélation, ANOVA F — retient les 10 variables les plus importantes pour réduire la dimensionnalité ANFIS
+3. **Entraînement** (`models.py`) : Random Forest (RandomizedSearchCV), SVM (noyau RBF), ANFIS Takagi-Sugeno (PyTorch, fonctions d'appartenance gaussiennes)
+4. **Évaluation** (`evaluation.py`) : accuracy, précision, rappel, F1, AUC-ROC, spécificité, matrices de confusion, test de Wilcoxon et t-test apparié
+5. **Visualisations** : matrices de confusion, courbes ROC, graphique comparatif des métriques (enregistrés dans `results/`)
+6. **Explicabilité** (`explainability.py`) : SHAP pour Random Forest et SVM, extraction de règles floues pour ANFIS
+7. **Résumé** : résultats exportés dans `results/model_comparison.csv` et `results/statistical_significance.csv`
 
 ## Configuration
 
-Edit `src/config.py` to customize:
+Les principaux paramètres sont dans `src/config.py` : `RANDOM_SEED`, `TRAIN_TEST_SPLIT`, `CV_FOLDS`, `N_FEATURES_ANFIS`, `USE_SMOTE`, espaces de recherche hyperparam pour RF/SVM/ANFIS.
 
-```python
-# Random seed for reproducibility
-RANDOM_SEED = 42
+## Données
 
-# Train/test split ratio
-TRAIN_TEST_SPLIT = 0.8
+Dataset UCI — _Default of Credit Card Clients_ :
+https://archive.ics.uci.edu/ml/datasets/default+of+credit+card+clients
 
-# Cross-validation folds
-CV_FOLDS = 5
-CV_FOLDS_FINAL = 10
+Placer le fichier dans `data/` ou passer le chemin en argument.
 
-# Feature selection for ANFIS
-N_FEATURES_ANFIS = 10
+## Références
 
-# SMOTE configuration
-USE_SMOTE = True
-
-# Model hyperparameters
-RANDOM_FOREST_PARAMS = {...}
-SVM_PARAMS = {...}
-ANFIS_CONFIG = {...}
-```
-
-## Results
-
-All results are saved in the `results/` directory:
-
-- `model_comparison.csv`: Performance metrics for all models
-- `statistical_significance.csv`: Statistical test results
-- `confusion_matrices.png`: Visual comparison of confusion matrices
-- `roc_curves.png`: ROC curves for all models
-- `metrics_comparison.png`: Bar chart of key metrics
-
-## Methodology Highlights
-
-1. **Class Imbalance Handling**: SMOTE oversampling + class weights
-2. **Feature Selection**: Ensemble method to select most relevant features for ANFIS
-3. **Rigorous Evaluation**: Multiple metrics + statistical significance testing
-4. **Reproducibility**: Fixed random seeds, versioned code, documented parameters
-5. **Interpretability**: Fuzzy rule extraction and analysis
-
-## Key Findings (Template)
-
-After running the pipeline, document:
-
-1. Which model achieved the best F1-score?
-2. Is the difference statistically significant?
-3. What is the recall for the minority class (defaulters)?
-4. Are the ANFIS fuzzy rules interpretable and business-logical?
-
-## ANFIS Implementation Notes
-
-The current `models.py` contains a placeholder for ANFIS. To fully implement:
-
-### Option 1: Use existing library
-
-```bash
-pip install anfis
-```
-
-### Option 2: Implement custom Takagi-Sugeno ANFIS
-
-Required components:
-
-- Layer 1: Fuzzification (membership functions)
-- Layer 2: Rule firing strengths
-- Layer 3: Normalization
-- Layer 4: Consequent parameters (linear functions)
-- Layer 5: Defuzzification (weighted sum)
-
-### Option 3: Use scikit-fuzzy
-
-```python
-import skfuzzy as fuzz
-# Implement control system with fuzzy rules
-```
-
-## References
-
-- UCI ML Repository: Default of Credit Card Clients Dataset
 - Jang, J.-S. R. (1993). ANFIS: Adaptive-Network-Based Fuzzy Inference System
 - Chawla et al. (2002). SMOTE: Synthetic Minority Over-sampling Technique
-
-## Academic Context
-
-This implementation follows the methodology described in `methodology_section.md` and is designed for a master's thesis project evaluating ANFIS for credit risk prediction.
-
-### Strengths of this approach:
-
-- Complete data preprocessing pipeline
-- Addresses class imbalance
-- Feature selection for ANFIS dimensionality
-- Statistical significance testing
-- Interpretability analysis
-- Reproducible and well-documented
-
-## Author
-
-Master's Project - Credit Risk Prediction with ANFIS
-
-## License
-
-Academic use only

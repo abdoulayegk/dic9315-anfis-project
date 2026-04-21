@@ -3,6 +3,7 @@
 Quick-and-dirty student-style script for credit default prediction with
 RandomForest, SVM and a lightweight ANFIS-like classifier.
 """
+
 import warnings
 from pathlib import Path
 
@@ -13,19 +14,18 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
     confusion_matrix,
     f1_score,
+    recall_score,
     roc_auc_score,
     roc_curve,
-    recall_score,
 )
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 from sklearn.svm import SVC
-from sklearn.linear_model import LogisticRegression
-
 
 warnings.filterwarnings("ignore")
 
@@ -101,7 +101,7 @@ def prep_features(df_clean, target_col):
     return X_blob, y_blob, column_magician
 
 
-def run_grid(model, params, Xfit, yfit):
+def run_grid(model, params, x_fit, y_fit):
     folds = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     gs = GridSearchCV(
         estimator=model,
@@ -111,22 +111,22 @@ def run_grid(model, params, Xfit, yfit):
         cv=folds,
         verbose=0,
     )
-    gs.fit(Xfit, yfit)
+    gs.fit(x_fit, y_fit)
     return gs
 
 
-def evaluate_model(model_name, fitted_model, Xte, yte):
-    preds = fitted_model.predict(Xte)
+def evaluate_model(model_name, fitted_model, x_test, y_test):
+    preds = fitted_model.predict(x_test)
     proba = (
-        fitted_model.predict_proba(Xte)[:, 1]
+        fitted_model.predict_proba(x_test)[:, 1]
         if hasattr(fitted_model, "predict_proba")
         else None
     )
-    acc = accuracy_score(yte, preds)
-    f1 = f1_score(yte, preds)
-    rec = recall_score(yte, preds)
-    auc = roc_auc_score(yte, proba) if proba is not None else float("nan")
-    cm = confusion_matrix(yte, preds)
+    acc = accuracy_score(y_test, preds)
+    f1 = f1_score(y_test, preds)
+    rec = recall_score(y_test, preds)
+    auc = roc_auc_score(y_test, proba) if proba is not None else float("nan")
+    cm = confusion_matrix(y_test, preds)
     print(f"\n=== {model_name} ===")
     print(f"Accuracy: {acc:.4f}")
     print(f"F1-score: {f1:.4f}")
@@ -135,8 +135,10 @@ def evaluate_model(model_name, fitted_model, Xte, yte):
     print("Confusion matrix:")
     print(cm)
     if proba is not None:
-        fpr, tpr, _ = roc_curve(yte, proba)
-        print(f"ROC curve points (first 5): {list(zip(fpr[:5], tpr[:5]))}")
+        fpr, tpr, _ = roc_curve(y_test, proba)
+        print(
+            f"ROC curve points (first 5): {list(zip(fpr[:5], tpr[:5], strict=False))}"
+        )
 
 
 def main():

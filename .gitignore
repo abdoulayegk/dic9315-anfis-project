@@ -20,16 +20,23 @@ wheels/
 .installed.cfg
 *.egg
 
+# Code quality tools
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.pytest_cache/
+coverage.xml
 # Virtual environments
 venv/
 ENV/
 env/
 .venv
+.venv-wsl/
 DIC9315/
 
-# Jupyter Notebook
+# Jupyter Notebook (checkpoints only; track .ipynb source)
 .ipynb_checkpoints/
-*.ipynb
 
 # IDE
 .vscode/
@@ -41,12 +48,15 @@ DIC9315/
 # OS
 .DS_Store
 Thumbs.db
+.~lock.*
+**/.~lock.*
 
 # Data files (large)
 *.csv
 *.xls
 *.xlsx
-data/
+# data/
+results/
 
 # Model files
 *.pkl
@@ -57,8 +67,56 @@ data/
 # Documentation
 Rapport_*.pdf
 *.pdf
+*.tex
+*.png
+capture_*.sh
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.glg
+*.glo
+*.gls
+*.idx
+*.ilg
+*.ind
+*.ist
+*.lof
+*.log
+*.lot
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex.gz
+*.toc
+*.vrb
+*.xdv
+*.dvi
+*.ps
+
+# Sphinx (generated site; tracked sources are under docs/source/)
+docs/build/
+docs/guide_integration_latex/
+
+# Generated outputs (do not push)
+results/
+plots/
+reports/
+.mutmut-cache/
+
+# MLflow local artifact store (runs, models, logs — regenerated on every run,
+# can reach hundreds of MB after a few pipeline executions)
+mlruns/
+mlflow.db
+mlflow-export/
+
+# Claude Code local workspace config
+.claude/
 
 # Results/outputs (optional - uncomment if you want to track these)
-# results/
-# plots/
 # models/
